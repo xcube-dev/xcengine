@@ -15,29 +15,6 @@ from nbconvert import PythonExporter
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# def main():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("notebook", type=str)
-#     parser.add_argument(
-#         "--workdir",
-#         "-w",
-#         type=str,
-#         help="Use this as working directory (useful for debugging). "
-#         "If omitted, use an automatically created temporary directory.",
-#     )
-#     parser.add_argument(
-#         "--run",
-#         "-r",
-#         action="store_true",
-#         help="Run the image after building it",
-#     )
-#     args = parser.parse_args()
-#     if args.workdir:
-#         convert(args.workdir, args)
-#     else:
-#         with tempfile.TemporaryDirectory() as temp_dir:
-#             convert(temp_dir, args)
-
 @click.group()
 def cli():
     pass
