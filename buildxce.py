@@ -15,34 +15,33 @@ from nbconvert import PythonExporter
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-@click.group()
+
+@click.group(
+    help="Create and run compute engine scripts and containers "
+    "from IPython notebooks"
+)
 def cli():
     pass
 
+
 @cli.command(help="Create a compute engine script on the host system")
 @click.option(
-    "-b",
-    "--batch",
-    is_flag=True,
-    help="Run as batch script after creating")
+    "-b", "--batch", is_flag=True, help="Run as batch script after creating"
+)
 @click.option(
     "-s",
     "--server",
     is_flag=True,
-    help="Run as xcube server script after creating")
+    help="Run as xcube server script after creating",
+)
 @click.option(
     "-f",
     "--from-saved",
     is_flag=True,
-    help="If batch and server both used, serve datasets from saved Zarrs")
-@click.argument(
-    "notebook",
-    type=click.Path()
+    help="If batch and server both used, serve datasets from saved Zarrs",
 )
-@click.argument(
-    "output_dir",
-    type=click.Path()
-)
+@click.argument("notebook", type=click.Path())
+@click.argument("output_dir", type=click.Path())
 def create(batch, server, from_saved, notebook, output_dir):
     output_path = pathlib.Path(output_dir)
     pathlib.Path.mkdir(output_path, parents=True, exist_ok=True)
@@ -50,9 +49,9 @@ def create(batch, server, from_saved, notebook, output_dir):
     if batch or server:
         args = ["python3", output_path / "execute.py"]
         if batch:
-            args.append("--save")
+            args.append("--batch")
         if server:
-            args.append("--serve")
+            args.append("--server")
         if from_saved:
             args.append("--from-saved")
         subprocess.run(args)
@@ -60,56 +59,51 @@ def create(batch, server, from_saved, notebook, output_dir):
 
 @cli.command(help="Build a compute engine as a Docker image")
 @click.option(
-    "-b",
-    "--batch",
-    is_flag=True,
-    help="Run as batch script after creating")
+    "-b", "--batch", is_flag=True, help="Run as batch script after creating"
+)
 @click.option(
     "-s",
     "--server",
     is_flag=True,
-    help="Run as xcube server script after creating")
+    help="Run as xcube server script after creating",
+)
 @click.option(
     "-f",
     "--from-saved",
     is_flag=True,
-    help="If batch and server both used, serve datasets from saved Zarrs")
-@click.option(
-    "-w",
-    "--workdir",
-    type=str
+    help="If batch and server both used, serve datasets from saved Zarrs",
 )
-@click.argument(
-    "notebook",
-    type=click.Path()
-)
+@click.option("-w", "--workdir", type=str)
+@click.argument("notebook", type=click.Path())
 def build(batch, server, from_saved, workdir, notebook):
     # TODO allow export of saved results from container
     if workdir:
-        convert(workdir, notebook, batch or server)
+        convert(workdir, notebook, batch, server, from_saved)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            convert(temp_dir, notebook, batch or server)
+            convert(temp_dir, notebook, batch, server, from_saved)
 
 
-def convert(output_dir, notebook, run):
+def convert(output_dir, notebook, batch, server, from_saved):
     output_path = pathlib.Path(output_dir)
     write_script(output_path, notebook)
     export_conda_env(output_path)
     image = build_image(output_path)
-    if run:
+    if batch or server:
         client = docker.from_env()
         LOGGER.info(f"Running {image.tags}")
-        command = ["python", "execute.py"]
-        if run:
-            # TODO better mapping of CLI arguments
-            command += ["--save", "--serve", "--from-saved"]
+        command = (
+            ["python", "execute.py"]
+            + (["--batch"] if batch else [])
+            + (["--server"] if server else [])
+            + (["--from-saved"] if from_saved else [])
+        )
         client.containers.run(
             image=image,
             command=command,
             ports={8080: 8080},
             remove=True,
-            #            auto_remove=True,
+            # auto_remove=True,
             detach=False,
         )
 
@@ -152,5 +146,6 @@ def build_image(docker_path):
     )
     return image
 
+
 if __name__ == "__main__":
-     cli()
+    cli()

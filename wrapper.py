@@ -15,8 +15,8 @@ logging.basicConfig(level=logging.INFO)
 # collision with identifiers in the user code.
 
 __parser = argparse.ArgumentParser()
-__parser.add_argument("--save", action="store_true")
-__parser.add_argument("--serve", action="store_true")
+__parser.add_argument("--batch", action="store_true")
+__parser.add_argument("--server", action="store_true")
 __parser.add_argument("--from-saved", action="store_true")
 __args = __parser.parse_args()
 xcube.util.plugin.init_plugins()
@@ -26,7 +26,7 @@ __datasets = {name: thing for name, thing in locals().copy().items()
 
 __saved_datasets = {}
 
-if __args.save:
+if __args.batch:
     __output_path = pathlib.Path.home() / "output"
     __output_path.mkdir(parents=True, exist_ok=True)
     for __name, __dataset in __datasets.items():
@@ -34,7 +34,7 @@ if __args.save:
         __saved_datasets[__name] = __dataset_path
         __dataset.to_zarr(__dataset_path)
 
-if __args.serve:
+if __args.server:
     xcube.util.plugin.init_plugins()
     __server = Server(
         framework=get_framework_class("tornado")(),
@@ -44,7 +44,7 @@ if __args.serve:
     for __name in __datasets:
         __dataset = (
             xr.open_zarr(__saved_datasets[__name])
-            if __args.save and __args.from_saved
+            if __args.batch and __args.from_saved
             else __datasets[__name]
         )
         __context.add_dataset(__dataset, __name, style="bar")
