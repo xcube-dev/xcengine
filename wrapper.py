@@ -7,6 +7,7 @@ import sys
 import argparse
 import pathlib
 import logging
+import tarfile
 
 import xarray as xr
 from xcube.server.server import Server
@@ -17,42 +18,45 @@ import xcube.core.new
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# We use double underscores for all variable names to reduce the chance of a
-# collision with identifiers in the user code.
 
-__parser = argparse.ArgumentParser()
-__parser.add_argument("--batch", action="store_true")
-__parser.add_argument("--server", action="store_true")
-__parser.add_argument("--from-saved", action="store_true")
-__args = __parser.parse_args()
-xcube.util.plugin.init_plugins()
-
-__datasets = {name: thing for name, thing in locals().copy().items()
-              if isinstance(thing, xr.Dataset) and not name.startswith("_")}
-
-__saved_datasets = {}
-
-if __args.batch:
-    __output_path = pathlib.Path(sys.argv[0]).parent / "output"
-    __output_path.mkdir(parents=True, exist_ok=True)
-    for __name, __dataset in __datasets.items():
-        __dataset_path = __output_path / (__name + ".zarr")
-        __saved_datasets[__name] = __dataset_path
-        __dataset.to_zarr(__dataset_path)
-
-if __args.server:
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch", action="store_true")
+    parser.add_argument("--server", action="store_true")
+    parser.add_argument("--from-saved", action="store_true")
+    args = parser.parse_args()
     xcube.util.plugin.init_plugins()
-    __server = Server(
-        framework=get_framework_class("tornado")(),
-        config={}
-    )
-    __context = __server.ctx.get_api_ctx("datasets")
-    for __name in __datasets:
-        __dataset = (
-            xr.open_zarr(__saved_datasets[__name])
-            if __args.batch and __args.from_saved
-            else __datasets[__name]
+
+    datasets = {name: thing for name, thing in globals().copy().items()
+                  if isinstance(thing, xr.Dataset) and not name.startswith("_")}
+
+    saved_datasets = {}
+
+    if args.batch:
+        output_path = pathlib.Path(sys.argv[0]).parent / "output"
+        output_path.mkdir(parents=True, exist_ok=True)
+        for name, dataset in datasets.items():
+            dataset_path = output_path / (name + ".zarr")
+            saved_datasets[name] = dataset_path
+            dataset.to_zarr(dataset_path)
+
+    if args.server:
+        xcube.util.plugin.init_plugins()
+        server = Server(
+            framework=get_framework_class("tornado")(),
+            config={}
         )
-        __context.add_dataset(__dataset, __name, style="bar")
-        LOGGER.info("Added " + __name)
-    __server.start()
+        context = server.ctx.get_api_ctx("datasets")
+        for name in datasets:
+            dataset = (
+                xr.open_zarr(saved_datasets[name])
+                if args.batch and args.from_saved
+                else datasets[name]
+            )
+            context.add_dataset(dataset, name, style="bar")
+            LOGGER.info("Added " + name)
+        server.start()
+
+
+if __name__ == "__main__":
+    main()
