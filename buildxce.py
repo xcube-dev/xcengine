@@ -8,12 +8,14 @@ import subprocess
 import logging
 import pathlib
 import textwrap
+import time
 from datetime import datetime
 
 import click
 import docker
 import docker.models.images
 import nbformat
+from docker.models.containers import Container
 from nbconvert import PythonExporter
 
 LOGGER = logging.getLogger(__name__)
@@ -114,7 +116,6 @@ def create(
 def build(
     batch: bool, server: bool, from_saved: bool, workdir, notebook
 ) -> None:
-    # TODO allow export of saved results from container
     if workdir:
         _build(workdir, notebook, batch, server, from_saved)
     else:
@@ -152,6 +153,14 @@ def _build(
             detach=True,
         )
         LOGGER.info(f"Container {container.short_id} is running.")
+        time.sleep(5)
+        LOGGER.info(f"Copying results from container...")
+        # TODO Unpack tar
+        # TODO Add option for output directory
+        extract_output_from_container(
+            container, pathlib.Path("output.tar")
+        )
+        LOGGER.info(f"Results copied")
 
 
 def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path) -> None:
@@ -198,6 +207,13 @@ def clear_directory(path: pathlib.Path) -> None:
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+
+def extract_output_from_container(container: Container, dest_dir: pathlib.Path) -> None:
+    with open(dest_dir, "wb") as fh:
+        bits, stat = container.get_archive("/home/xcube/output")
+        for chunk in bits:
+            fh.write(chunk)
 
 
 if __name__ == "__main__":

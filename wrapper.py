@@ -7,7 +7,6 @@ import sys
 import argparse
 import pathlib
 import logging
-import tarfile
 
 import xarray as xr
 from xcube.server.server import Server
@@ -33,12 +32,14 @@ def main():
     saved_datasets = {}
 
     if args.batch:
-        output_path = pathlib.Path(sys.argv[0]).parent / "output"
+        parent_path = pathlib.Path(sys.argv[0]).parent
+        output_path = parent_path / "output"
         output_path.mkdir(parents=True, exist_ok=True)
         for name, dataset in datasets.items():
             dataset_path = output_path / (name + ".zarr")
             saved_datasets[name] = dataset_path
             dataset.to_zarr(dataset_path)
+        (parent_path / "finished").touch()
 
     if args.server:
         xcube.util.plugin.init_plugins()
