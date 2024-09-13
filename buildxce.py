@@ -12,6 +12,7 @@ from datetime import datetime
 
 import click
 import docker
+import docker.models.images
 import nbformat
 from nbconvert import PythonExporter
 
@@ -115,15 +116,15 @@ def build(
 ) -> None:
     # TODO allow export of saved results from container
     if workdir:
-        convert(workdir, notebook, batch, server, from_saved)
+        _build(workdir, notebook, batch, server, from_saved)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            convert(
+            _build(
                 pathlib.Path(temp_dir), notebook, batch, server, from_saved
             )
 
 
-def convert(
+def _build(
     output_dir: pathlib.Path,
     notebook: pathlib.Path,
     batch: bool,
@@ -135,24 +136,25 @@ def convert(
     image = build_image(output_dir)
     if batch or server:
         client = docker.from_env()
-        LOGGER.info(f"Running {image.tags}")
+        LOGGER.info(f"Running container from image {image.short_id}")
+        LOGGER.info(f"Image tags: {' '.join(image.tags)}")
         command = (
             ["python", "execute.py"]
             + (["--batch"] if batch else [])
             + (["--server"] if server else [])
             + (["--from-saved"] if from_saved else [])
         )
-        client.containers.run(
+        container = client.containers.run(
             image=image,
             command=command,
             ports={8080: 8080},
-            remove=True,
-            # auto_remove=True,
-            detach=False,
+            remove=False,
+            detach=True,
         )
+        LOGGER.info(f"Container {container.short_id} is running.")
 
 
-def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path):
+def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path) -> None:
     with open(input_notebook) as fh:
         notebook = nbformat.read(fh, as_version=4)
     exporter = PythonExporter()
@@ -165,17 +167,18 @@ def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path):
         fh.write(wrapper)
 
 
-def export_conda_env(output_path: pathlib.Path):
+def export_conda_env(output_path: pathlib.Path) -> None:
     process = subprocess.run(["conda", "env", "export"], capture_output=True)
     with open(output_path / "environment.yml", "wb") as fh:
         fh.write(process.stdout)
 
 
-def build_image(docker_path: pathlib.Path):
+def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
     client = docker.from_env()
     dockerfile = textwrap.dedent(
         """
     FROM quay.io/bcdev/xcube:v1.7.0
+    COPY user_code.py user_code.py
     COPY execute.py execute.py
     CMD python execute.py
     """
