@@ -49,8 +49,16 @@ def cli():
     is_flag=True,
     help="Clear output directory before writing to it",
 )
-@click.argument("notebook", type=click.Path(), path_type=pathlib.Path)
-@click.argument("output_dir", type=click.Path(), path_type=pathlib.Path)
+@click.argument(
+    "notebook",
+    type=click.Path(
+        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
+    ),
+)
+@click.argument(
+    "output_dir",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+)
 def create(
     batch: bool,
     server: bool,
@@ -91,8 +99,17 @@ def create(
     is_flag=True,
     help="If batch and server both used, serve datasets from saved Zarrs",
 )
-@click.option("-w", "--workdir", type=click.Path(), path_type=pathlib.Path)
-@click.argument("notebook", type=click.Path(), path_type=pathlib.Path)
+@click.option(
+    "-w",
+    "--workdir",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+)
+@click.argument(
+    "notebook",
+    type=click.Path(
+        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
+    ),
+)
 def build(
     batch: bool, server: bool, from_saved: bool, workdir, notebook
 ) -> None:
@@ -138,18 +155,13 @@ def convert(
 def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path):
     with open(input_notebook) as fh:
         notebook = nbformat.read(fh, as_version=4)
-
     exporter = PythonExporter()
     (body, resources) = exporter.from_notebook_node(notebook)
-    with open("user_code.py", "w") as fh:
+    with open(output_dir / "user_code.py", "w") as fh:
         fh.write(body)
-
     with open(pathlib.Path(sys.argv[0]).parent / "wrapper.py", "r") as fh:
         wrapper = fh.read()
-
-    output_path = pathlib.Path(output_dir)
-    with open(output_path / "execute.py", "w") as fh:
-        fh.write(body)
+    with open(output_dir / "execute.py", "w") as fh:
         fh.write(wrapper)
 
 
