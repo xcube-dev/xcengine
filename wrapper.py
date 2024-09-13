@@ -1,3 +1,9 @@
+with open("user_code.py", "r") as fh:
+    user_code = fh.read()
+
+exec(user_code)
+
+import sys
 import argparse
 import pathlib
 import logging
@@ -27,7 +33,7 @@ __datasets = {name: thing for name, thing in locals().copy().items()
 __saved_datasets = {}
 
 if __args.batch:
-    __output_path = pathlib.Path.home() / "output"
+    __output_path = pathlib.Path(sys.argv[0]).parent / "output"
     __output_path.mkdir(parents=True, exist_ok=True)
     for __name, __dataset in __datasets.items():
         __dataset_path = __output_path / (__name + ".zarr")
