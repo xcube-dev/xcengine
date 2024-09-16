@@ -34,34 +34,43 @@ def cli():
     pass
 
 
-@cli.command(help="Create a compute engine script on the host system")
-@click.option(
+batch_option = click.option(
     "-b", "--batch", is_flag=True, help="Run as batch script after creating"
 )
-@click.option(
+
+server_option = click.option(
     "-s",
     "--server",
     is_flag=True,
     help="Run as xcube server script after creating",
 )
-@click.option(
+
+from_saved_option = click.option(
     "-f",
     "--from-saved",
     is_flag=True,
     help="If batch and server both used, serve datasets from saved Zarrs",
 )
+
+notebook_argument = click.argument(
+    "notebook",
+    type=click.Path(
+        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
+    ),
+)
+
+
+@cli.command(help="Create a compute engine script on the host system")
+@batch_option
+@server_option
+@from_saved_option
 @click.option(
     "-c",
     "--clear",
     is_flag=True,
     help="Clear output directory before writing to it",
 )
-@click.argument(
-    "notebook",
-    type=click.Path(
-        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
-    ),
-)
+@notebook_argument
 @click.argument(
     "output_dir",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
@@ -91,32 +100,15 @@ def create(
 
 
 @cli.command(help="Build a compute engine as a Docker image")
-@click.option(
-    "-b", "--batch", is_flag=True, help="Run as batch script after creating"
-)
-@click.option(
-    "-s",
-    "--server",
-    is_flag=True,
-    help="Run as xcube server script after creating",
-)
-@click.option(
-    "-f",
-    "--from-saved",
-    is_flag=True,
-    help="If batch and server both used, serve datasets from saved Zarrs",
-)
+@batch_option
+@server_option
+@from_saved_option
 @click.option(
     "-w",
     "--workdir",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
 )
-@click.argument(
-    "notebook",
-    type=click.Path(
-        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
-    ),
-)
+@notebook_argument
 def build(
     batch: bool, server: bool, from_saved: bool, workdir, notebook
 ) -> None:
@@ -124,9 +116,7 @@ def build(
         _build(workdir, notebook, batch, server, from_saved)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            _build(
-                pathlib.Path(temp_dir), notebook, batch, server, from_saved
-            )
+            _build(pathlib.Path(temp_dir), notebook, batch, server, from_saved)
 
 
 def _build(
@@ -161,13 +151,13 @@ def _build(
         LOGGER.info(f"Copying results from container...")
         # TODO Unpack tar
         # TODO Add option for output directory
-        extract_output_from_container(
-            container, pathlib.Path("output.tar")
-        )
+        extract_output_from_container(container, pathlib.Path("output.tar"))
         LOGGER.info(f"Results copied")
 
 
-def write_script(output_dir: pathlib.Path, input_notebook: pathlib.Path) -> None:
+def write_script(
+    output_dir: pathlib.Path, input_notebook: pathlib.Path
+) -> None:
     with open(input_notebook) as fh:
         notebook = nbformat.read(fh, as_version=4)
     exporter = PythonExporter()
@@ -213,7 +203,9 @@ def clear_directory(path: pathlib.Path) -> None:
             os.remove(path)
 
 
-def extract_output_from_container(container: Container, dest_dir: pathlib.Path) -> None:
+def extract_output_from_container(
+    container: Container, dest_dir: pathlib.Path
+) -> None:
     with open(dest_dir, "wb") as fh:
         bits, stat = container.get_archive("/home/xcube/output")
         for chunk in bits:
