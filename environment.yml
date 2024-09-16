@@ -1,0 +1,13 @@
+name: xcengine
+channels:
+  - conda-forge
+dependencies:
+  # Python
+  - python >=3.10
+  # Required
+  - click
+  - docker-py
+  - nbformat
+  - nbconvert
+  - xarray
+  - xcube

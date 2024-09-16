@@ -24,6 +24,7 @@ dependencies = [
   "docker",
   "nbformat",
   "nbconvert",
+  "xarray",
   "xcube-core"
 ]
 
