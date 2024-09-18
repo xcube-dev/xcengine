@@ -7,6 +7,7 @@ dependencies:
   # Required
   - click
   - docker-py
+  - ipython  # Used by nbconvert to transform IPython syntax to pure Python
   - nbformat
   - nbconvert
   - xarray
