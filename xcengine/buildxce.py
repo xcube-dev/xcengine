@@ -5,8 +5,8 @@
 # https://opensource.org/licenses/MIT.
 
 import os
-import sys
 import shutil
+import tarfile
 import tempfile
 import subprocess
 import logging
@@ -30,8 +30,10 @@ logging.basicConfig(level=logging.INFO)
     help="Create and run compute engine scripts and containers "
     "from IPython notebooks"
 )
-def cli():
-    pass
+@click.option("-v", "--verbose", count=True)
+def cli(verbose):
+    if verbose > 0:
+        logging.getLogger().setLevel(logging.DEBUG)
 
 
 batch_option = click.option(
@@ -107,28 +109,58 @@ def create(
     "-w",
     "--workdir",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+    help="Working directory to use for preparing the Docker image. If not "
+    "specified, an automatically created temporary directory will be used.",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+    help="Write output data to this directory.",
+)
+@click.option(
+    "-k",
+    "--keep",
+    is_flag=True,
+    help="Keep container after it has finished running.",
 )
 @notebook_argument
 def build(
-    batch: bool, server: bool, from_saved: bool, workdir, notebook
-) -> None:
-    if workdir:
-        _build(workdir, notebook, batch, server, from_saved)
-    else:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            _build(pathlib.Path(temp_dir), notebook, batch, server, from_saved)
-
-
-def _build(
-    output_dir: pathlib.Path,
-    notebook: pathlib.Path,
     batch: bool,
     server: bool,
     from_saved: bool,
+    keep: bool,
+    workdir: pathlib.Path,
+    notebook: pathlib.Path,
+    output: pathlib.Path
 ) -> None:
-    write_script(output_dir, notebook)
-    export_conda_env(output_dir)
-    image = build_image(output_dir)
+    if workdir:
+        _build(workdir, notebook, output, batch, server, from_saved, keep)
+    else:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _build(
+                pathlib.Path(temp_dir),
+                notebook,
+                output,
+                batch,
+                server,
+                from_saved,
+                keep,
+            )
+
+
+def _build(
+    work_dir: pathlib.Path,
+    notebook: pathlib.Path,
+    output_dir: pathlib.Path,
+    batch: bool,
+    server: bool,
+    from_saved: bool,
+    keep: bool,
+) -> None:
+    write_script(work_dir, notebook)
+    export_conda_env(work_dir)
+    image = build_image(work_dir)
     if batch or server:
         client = docker.from_env()
         LOGGER.info(f"Running container from image {image.short_id}")
@@ -139,20 +171,29 @@ def _build(
             + (["--server"] if server else [])
             + (["--from-saved"] if from_saved else [])
         )
-        container = client.containers.run(
+        container: Container = client.containers.run(
             image=image,
             command=command,
             ports={8080: 8080},
             remove=False,
             detach=True,
         )
-        LOGGER.info(f"Container {container.short_id} is running.")
-        time.sleep(5)
-        LOGGER.info(f"Copying results from container...")
-        # TODO Unpack tar
-        # TODO Add option for output directory
-        extract_output_from_container(container, pathlib.Path("output.tar"))
-        LOGGER.info(f"Results copied")
+        LOGGER.info(f"Waiting for container {container.short_id} to complete.")
+        while container.status in {"created", "running"}:
+            LOGGER.debug(
+                f"Waiting for {container.short_id} (status: {container.status})"
+            )
+            time.sleep(2)
+            container.reload()
+        LOGGER.info(f"Container {container.short_id} is {container.status}.")
+        if output_dir:
+            LOGGER.info(f"Copying results from container to {output_dir}...")
+            extract_output_from_container(container, output_dir)
+            LOGGER.info(f"Results copied.")
+        if not server and not keep:
+            LOGGER.info(f"Removing container {container.short_id}...")
+            container.remove(force=True)
+            LOGGER.info(f"Container {container.short_id} removed.")
 
 
 def write_script(
@@ -164,7 +205,7 @@ def write_script(
     (body, resources) = exporter.from_notebook_node(notebook)
     with open(output_dir / "user_code.py", "w") as fh:
         fh.write(body)
-    with open(pathlib.Path(sys.argv[0]).parent / "wrapper.py", "r") as fh:
+    with open(pathlib.Path(__file__).parent / "wrapper.py", "r") as fh:
         wrapper = fh.read()
     with open(output_dir / "execute.py", "w") as fh:
         fh.write(wrapper)
@@ -202,14 +243,25 @@ def clear_directory(path: pathlib.Path) -> None:
         else:
             os.remove(path)
 
+def _tar_strip(member, path):
+    member_1 = tarfile.data_filter(member, path)
+    member_2 = member.replace(
+        name=pathlib.Path(*pathlib.Path(member_1.path).parts[1:])
+    )
+    return member_2
+
 
 def extract_output_from_container(
     container: Container, dest_dir: pathlib.Path
 ) -> None:
-    with open(dest_dir, "wb") as fh:
-        bits, stat = container.get_archive("/home/xcube/output")
-        for chunk in bits:
-            fh.write(chunk)
+    bits, stat = container.get_archive("/home/xcube/output")
+    with tempfile.NamedTemporaryFile(suffix=".tar") as temp_tar:
+        # TODO stream this directly to tarfile rather than using a temp file
+        with open(temp_tar.name, "wb") as fh:
+            for chunk in bits:
+                fh.write(chunk)
+        with tarfile.open(temp_tar.name, "r") as tar_fh:
+            tar_fh.extractall(dest_dir, filter=_tar_strip)
 
 
 if __name__ == "__main__":
