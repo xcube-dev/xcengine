@@ -13,6 +13,7 @@ import logging
 import pathlib
 import textwrap
 import time
+import uuid
 from datetime import datetime
 
 import click
@@ -89,7 +90,7 @@ def create(
     if clear:
         clear_directory(output_dir)
 
-    write_script(output_dir, notebook)
+    convert_notebook_to_script(output_dir, notebook)
     if batch or server:
         args = ["python3", output_dir / "execute.py"]
         if batch:
@@ -132,7 +133,7 @@ def build(
     keep: bool,
     workdir: pathlib.Path,
     notebook: pathlib.Path,
-    output: pathlib.Path
+    output: pathlib.Path,
 ) -> None:
     if workdir:
         _build(workdir, notebook, output, batch, server, from_saved, keep)
@@ -158,7 +159,7 @@ def _build(
     from_saved: bool,
     keep: bool,
 ) -> None:
-    write_script(work_dir, notebook)
+    convert_notebook_to_script(work_dir, notebook)
     export_conda_env(work_dir)
     image = build_image(work_dir)
     if batch or server:
@@ -196,11 +197,12 @@ def _build(
             LOGGER.info(f"Container {container.short_id} removed.")
 
 
-def write_script(
+def convert_notebook_to_script(
     output_dir: pathlib.Path, input_notebook: pathlib.Path
 ) -> None:
     with open(input_notebook) as fh:
         notebook = nbformat.read(fh, as_version=4)
+    insert_params_cell(notebook)
     exporter = PythonExporter()
     (body, resources) = exporter.from_notebook_node(notebook)
     with open(output_dir / "user_code.py", "w") as fh:
@@ -209,6 +211,26 @@ def write_script(
         wrapper = fh.read()
     with open(output_dir / "execute.py", "w") as fh:
         fh.write(wrapper)
+
+
+def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
+    params_cell_index = None
+    for i, cell in enumerate(notebook.cells):
+        if hasattr(md := cell.metadata, "tags") and "parameters" in md.tags:
+            params_cell_index = i
+            break
+    if params_cell_index is not None:
+        notebook.cells.insert(
+            params_cell_index + 1,
+            {
+                "cell_type": "code",
+                "execution_count": 0,
+                "id": str(uuid.uuid4()),
+                "metadata": {},
+                "outputs": [],
+                "source": "__xce_set_params()",
+            },
+        )
 
 
 def export_conda_env(output_path: pathlib.Path) -> None:
@@ -242,6 +264,7 @@ def clear_directory(path: pathlib.Path) -> None:
             shutil.rmtree(path)
         else:
             os.remove(path)
+
 
 def _tar_strip(member, path):
     member_1 = tarfile.data_filter(member, path)

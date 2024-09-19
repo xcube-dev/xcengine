@@ -1,3 +1,21 @@
+import logging
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+
+def __xce_set_params():
+    import os
+
+    code = ""
+    for key, value in os.environ.items():
+        if key.startswith("xce_"):
+            varname = key[4:]
+            code += f"global {varname}\n{varname} = {value}\n"
+            LOGGER.info("Setting parameter: {varname} = {value}")
+    exec(code)
+
+
 with open("user_code.py", "r") as fh:
     user_code = fh.read()
 
@@ -6,16 +24,12 @@ exec(user_code)
 import sys
 import argparse
 import pathlib
-import logging
 
 import xarray as xr
 from xcube.server.server import Server
 from xcube.server.framework import get_framework_class
 import xcube.util.plugin
 import xcube.core.new
-
-LOGGER = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 def main():
@@ -26,8 +40,11 @@ def main():
     args = parser.parse_args()
     xcube.util.plugin.init_plugins()
 
-    datasets = {name: thing for name, thing in globals().copy().items()
-                  if isinstance(thing, xr.Dataset) and not name.startswith("_")}
+    datasets = {
+        name: thing
+        for name, thing in globals().copy().items()
+        if isinstance(thing, xr.Dataset) and not name.startswith("_")
+    }
 
     saved_datasets = {}
 
@@ -43,10 +60,7 @@ def main():
 
     if args.server:
         xcube.util.plugin.init_plugins()
-        server = Server(
-            framework=get_framework_class("tornado")(),
-            config={}
-        )
+        server = Server(framework=get_framework_class("tornado")(), config={})
         context = server.ctx.get_api_ctx("datasets")
         for name in datasets:
             dataset = (
