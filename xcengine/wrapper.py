@@ -12,7 +12,8 @@ def __xce_set_params():
         if key.startswith("xce_"):
             varname = key[4:]
             code += f"global {varname}\n{varname} = {value}\n"
-            LOGGER.info("Setting parameter: {varname} = {value}")
+            LOGGER.info(f"Configuring parameter: {varname} = {value}")
+    LOGGER.info(f"Setting configured parameters.")
     exec(code)
 
 
@@ -37,9 +38,12 @@ def main():
     parser.add_argument("--batch", action="store_true")
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--from-saved", action="store_true")
+    parser.add_argument("-v", "--verbose", action="count", default=0)
     args = parser.parse_args()
-    xcube.util.plugin.init_plugins()
+    if args.verbose > 0:
+        LOGGER.setLevel(logging.DEBUG)
 
+    xcube.util.plugin.init_plugins()
     datasets = {
         name: thing
         for name, thing in globals().copy().items()
