@@ -8,7 +8,10 @@ dependencies:
   - click
   - docker-py
   - ipython  # Used by nbconvert to transform IPython syntax to pure Python
-  - nbformat
   - nbconvert
-  - xarray
-  - xcube
+  - nbformat
+  - pyyaml
+  - xcube  # See note below
+
+# Note: xcube is not required for the conversion itself, but is required
+# to run generated scripts outside containers ("create" mode).
