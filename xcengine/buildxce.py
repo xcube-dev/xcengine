@@ -15,11 +15,13 @@ import textwrap
 import time
 import uuid
 from datetime import datetime
+from collections.abc import Mapping
 
 import click
 import docker
 import docker.models.images
 import nbformat
+import yaml
 from docker.models.containers import Container
 from nbconvert import PythonExporter
 
@@ -125,6 +127,13 @@ def create(
     is_flag=True,
     help="Keep container after it has finished running.",
 )
+@click.option(
+    "-e",
+    "--environment",
+    type=click.Path(path_type=pathlib.Path, dir_okay=False, file_okay=True),
+    help="Conda environment file to use in docker image. "
+    "If not specified, use the current environment.",
+)
 @notebook_argument
 def build(
     batch: bool,
@@ -134,20 +143,23 @@ def build(
     workdir: pathlib.Path,
     notebook: pathlib.Path,
     output: pathlib.Path,
+    environment: pathlib.Path,
 ) -> None:
+    args = dict(
+        notebook=notebook,
+        output_dir=output,
+        batch=batch,
+        server=server,
+        from_saved=from_saved,
+        keep=keep,
+        environment=environment,
+    )
     if workdir:
-        _build(workdir, notebook, output, batch, server, from_saved, keep)
+        os.makedirs(workdir, exist_ok=True)
+        _build(work_dir=workdir, **args)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            _build(
-                pathlib.Path(temp_dir),
-                notebook,
-                output,
-                batch,
-                server,
-                from_saved,
-                keep,
-            )
+            _build(work_dir=pathlib.Path(temp_dir), **args)
 
 
 def _build(
@@ -158,9 +170,13 @@ def _build(
     server: bool,
     from_saved: bool,
     keep: bool,
+    environment: pathlib.Path,
 ) -> None:
     convert_notebook_to_script(work_dir, notebook)
-    export_conda_env(work_dir)
+    if environment:
+        shutil.copy2()
+    else:
+        export_conda_env(work_dir)
     image = build_image(work_dir)
     if batch or server:
         client = docker.from_env()
@@ -235,15 +251,42 @@ def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
 
 def export_conda_env(output_path: pathlib.Path) -> None:
     process = subprocess.run(["conda", "env", "export"], capture_output=True)
-    with open(output_path / "environment.yml", "wb") as fh:
-        fh.write(process.stdout)
+    env_def = yaml.safe_load(process.stdout)
+    # TODO: improve handling of pip dependencies
+    # Find any pip dependencies and remove them (for now). This is a
+    # crude way to remove any non-PyPI dependencies installed from the local
+    # filesystem, which would break environment creation within the container.
+    # However, this risks removing required packages. Reproducing a live
+    # environment exactly is a hard problem but we could do better here.
+    deps: list = env_def["dependencies"]
+    pips = next(
+        (
+            d
+            for d in enumerate(deps)
+            if isinstance(d[1], Mapping) and "pip" in d[1]
+        ),
+        None,
+    )
+    if pips:
+        LOGGER.warning("Environment contains pip dependencies:")
+        for pkg in pips[1]["pip"]:
+            LOGGER.warning(pkg)
+        LOGGER.warning("These will be omitted from the container.")
+        del deps[pips[0]]
+    if not any(d for d in deps if d.startswith("xcube=")):
+        deps.append("xcube")
+    with open(output_path / "environment.yml", "w") as fh:
+        fh.write(yaml.safe_dump(env_def))
 
 
 def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
     client = docker.from_env()
     dockerfile = textwrap.dedent(
         """
-    FROM quay.io/bcdev/xcube:v1.7.0
+    FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
+    COPY environment.yml environment.yml
+    RUN micromamba install -y -n base -f environment.yml && \
+    micromamba clean --all --yes
     COPY user_code.py user_code.py
     COPY execute.py execute.py
     CMD python execute.py
@@ -251,10 +294,12 @@ def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
     )
     with open(docker_path / "Dockerfile", "w") as fh:
         fh.write(dockerfile)
+    LOGGER.info("Building Docker image...")
     image, logs = client.images.build(
         path=str(docker_path),
         tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
     )
+    LOGGER.info("Docker image built...")
     return image
 
 
