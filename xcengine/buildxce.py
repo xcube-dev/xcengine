@@ -21,12 +21,12 @@ from collections.abc import Mapping
 
 import click
 import docker
-import docker.models.images
-import nbformat
-import yaml
 from docker.errors import BuildError
 from docker.models.containers import Container
-from nbconvert import PythonExporter
+import docker.models.images
+import nbconvert
+import nbformat
+import yaml
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -91,11 +91,8 @@ def create(
     notebook: pathlib.Path,
     output_dir: pathlib.Path,
 ) -> None:
-    pathlib.Path.mkdir(output_dir, parents=True, exist_ok=True)
-    if clear:
-        clear_directory(output_dir)
-
-    convert_notebook_to_script(output_dir, notebook)
+    script_creator = ScriptCreator(output_dir, notebook)
+    script_creator.convert_notebook_to_script(clear_output=clear)
     if batch or server:
         args = ["python3", output_dir / "execute.py"]
         if batch:
@@ -175,7 +172,8 @@ def _build(
     keep: bool,
     environment: pathlib.Path,
 ) -> None:
-    convert_notebook_to_script(work_dir, notebook)
+    script_creator = ScriptCreator(work_dir, notebook)
+    script_creator.convert_notebook_to_script()
     if environment:
         shutil.copy2(environment, work_dir / "environment.yml")
     else:
@@ -216,40 +214,58 @@ def _build(
             LOGGER.info(f"Container {container.short_id} removed.")
 
 
-def convert_notebook_to_script(
-    output_dir: pathlib.Path, input_notebook: pathlib.Path
-) -> None:
-    with open(input_notebook) as fh:
-        notebook = nbformat.read(fh, as_version=4)
-    insert_params_cell(notebook)
-    exporter = PythonExporter()
-    (body, resources) = exporter.from_notebook_node(notebook)
-    with open(output_dir / "user_code.py", "w") as fh:
-        fh.write(body)
-    with open(pathlib.Path(__file__).parent / "wrapper.py", "r") as fh:
-        wrapper = fh.read()
-    with open(output_dir / "execute.py", "w") as fh:
-        fh.write(wrapper)
+class ScriptCreator:
+    """Turn a notebook into a set of scripts"""
 
+    def __init__(self, output_dir: pathlib.Path, input_notebook: pathlib.Path):
+        self.output_dir = output_dir
+        self.input_notebook = input_notebook
 
-def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
-    params_cell_index = None
-    for i, cell in enumerate(notebook.cells):
-        if hasattr(md := cell.metadata, "tags") and "parameters" in md.tags:
-            params_cell_index = i
-            break
-    if params_cell_index is not None:
-        notebook.cells.insert(
-            params_cell_index + 1,
-            {
-                "cell_type": "code",
-                "execution_count": 0,
-                "id": str(uuid.uuid4()),
-                "metadata": {},
-                "outputs": [],
-                "source": "__xce_set_params()",
-            },
-        )
+    def convert_notebook_to_script(self, clear_output=False) -> None:
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        if clear_output:
+            self.clear_output_directory()
+        with open(self.input_notebook) as fh:
+            notebook = nbformat.read(fh, as_version=4)
+        self.insert_params_cell(notebook)
+        exporter = nbconvert.PythonExporter()
+        (body, resources) = exporter.from_notebook_node(notebook)
+        with open(self.output_dir / "user_code.py", "w") as fh:
+            fh.write(body)
+        with open(pathlib.Path(__file__).parent / "wrapper.py", "r") as fh:
+            wrapper = fh.read()
+        with open(self.output_dir / "execute.py", "w") as fh:
+            fh.write(wrapper)
+
+    @staticmethod
+    def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
+        params_cell_index = None
+        for i, cell in enumerate(notebook.cells):
+            if (
+                hasattr(md := cell.metadata, "tags")
+                and "parameters" in md.tags
+            ):
+                params_cell_index = i
+                break
+        if params_cell_index is not None:
+            notebook.cells.insert(
+                params_cell_index + 1,
+                {
+                    "cell_type": "code",
+                    "execution_count": 0,
+                    "id": str(uuid.uuid4()),
+                    "metadata": {},
+                    "outputs": [],
+                    "source": "__xce_set_params()",
+                },
+            )
+
+    def clear_output_directory(self) -> None:
+        for path in self.output_dir.iterdir():
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
 
 
 def export_conda_env(output_path: pathlib.Path) -> None:
@@ -367,14 +383,6 @@ def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
 
     LOGGER.info("Docker image built.")
     return image
-
-
-def clear_directory(path: pathlib.Path) -> None:
-    for path in path.iterdir():
-        if path.is_dir():
-            shutil.rmtree(path)
-        else:
-            os.remove(path)
 
 
 def _tar_strip(member, path):
