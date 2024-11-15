@@ -4,8 +4,10 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
+import json
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 import subprocess
@@ -22,6 +24,7 @@ import docker
 import docker.models.images
 import nbformat
 import yaml
+from docker.errors import BuildError
 from docker.models.containers import Container
 from nbconvert import PythonExporter
 
@@ -174,7 +177,7 @@ def _build(
 ) -> None:
     convert_notebook_to_script(work_dir, notebook)
     if environment:
-        shutil.copy2()
+        shutil.copy2(environment, work_dir / "environment.yml")
     else:
         export_conda_env(work_dir)
     image = build_image(work_dir)
@@ -250,33 +253,89 @@ def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
 
 
 def export_conda_env(output_path: pathlib.Path) -> None:
-    process = subprocess.run(["conda", "env", "export"], capture_output=True)
-    env_def = yaml.safe_load(process.stdout)
-    # TODO: improve handling of pip dependencies
-    # Find any pip dependencies and remove them (for now). This is a
-    # crude way to remove any non-PyPI dependencies installed from the local
-    # filesystem, which would break environment creation within the container.
-    # However, this risks removing required packages. Reproducing a live
-    # environment exactly is a hard problem but we could do better here.
+    conda_process = subprocess.run(
+        ["conda", "env", "export"], capture_output=True
+    )
+    env_def = yaml.safe_load(conda_process.stdout)
+    # Try to remove any dependencies installed from the local filesystem,
+    # which would break environment creation within the container. This won't
+    # work if some of these packages are required for the compute code, but
+    # it's in any case questionable to base a compute engine on non-released
+    # code.
     deps: list = env_def["dependencies"]
-    pips = next(
+    pip_index, pip_map = next(
         (
             d
             for d in enumerate(deps)
             if isinstance(d[1], Mapping) and "pip" in d[1]
         ),
-        None,
+        (None, None),
     )
-    if pips:
-        LOGGER.warning("Environment contains pip dependencies:")
-        for pkg in pips[1]["pip"]:
-            LOGGER.warning(pkg)
-        LOGGER.warning("These will be omitted from the container.")
-        del deps[pips[0]]
-    if not any(d for d in deps if d.startswith("xcube=")):
+    pip_inspect = _PipInspect()
+    if pip_map:
+        nonlocals = []
+        for pkg in pip_map["pip"]:
+            if pip_inspect.is_local(pkg):
+                LOGGER.warning(
+                    f'Omitting locally installed package "{pkg}" '
+                    f"from environment"
+                )
+            else:
+                nonlocals.append(pkg)
+        if len(nonlocals) == 0:
+            del deps[pip_index]
+        else:
+            pip_map["pip"] = nonlocals
+    if not any(
+        map(lambda d: isinstance(d, str) and d.startswith("xcube="), deps)
+    ):
+        # We need xcube for the server and viewer functionality
         deps.append("xcube")
     with open(output_path / "environment.yml", "w") as fh:
         fh.write(yaml.safe_dump(env_def))
+
+
+class _PipInspect:
+    """A simple wrapper around `pip inspect` output
+
+    Provides a method to check whether a package was installed from the
+    local filesystem.
+    """
+
+    def __init__(self):
+        pip_process = subprocess.run(
+            ["pip", "--no-color", "inspect"], capture_output=True
+        )
+        pip_packages = json.loads(pip_process.stdout)
+        self.pkg_index: dict[str, dict] = {}
+        for pkg_data in pip_packages["installed"]:
+            self.pkg_index[name := pkg_data["metadata"]["name"]] = pkg_data
+
+    def is_local(self, package_spec: str) -> bool:
+        """Check if package was installed from local filesystem
+
+        The heuristic used by this function is not guaranteed 100% accurate.
+
+        :param package_spec: package name and optional version specifier, as
+            output from "conda env export"
+        :return: True iff the package was installed by pip from a local FS
+        """
+
+        package_name = package_spec.split("=")[0]
+        # We also check the package name with "_"s replaced with "-",
+        # since conda and pip package names often differ in this character.
+        return self._is_local(package_name) or self._is_local(
+            package_name.replace("_", "-")
+        )
+
+    def _is_local(self, package_name: str) -> bool:
+        return (pkg_record := self.pkg_index.get(package_name, {})).get(
+            "installer", ""
+        ) == "pip" and pkg_record.get("direct_url", {"url": ""}).get(
+            "url", ""
+        ).startswith(
+            "file://"
+        )
 
 
 def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
@@ -295,11 +354,18 @@ def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
     with open(docker_path / "Dockerfile", "w") as fh:
         fh.write(dockerfile)
     LOGGER.info("Building Docker image...")
-    image, logs = client.images.build(
-        path=str(docker_path),
-        tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
-    )
-    LOGGER.info("Docker image built...")
+    try:
+        image, logs = client.images.build(
+            path=str(docker_path),
+            tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
+        )
+    except BuildError as error:
+        LOGGER.error(error.msg)
+        for line in error.build_log:
+            LOGGER.error(line)
+        sys.exit(1)
+
+    LOGGER.info("Docker image built.")
     return image
 
 
