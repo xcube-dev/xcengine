@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -16,8 +17,7 @@ def __xce_set_params():
     LOGGER.info(f"Setting configured parameters.")
     exec(code)
 
-
-with open("user_code.py", "r") as fh:
+with pathlib.Path(__file__).with_name("user_code.py").resolve().open() as fh:
     user_code = fh.read()
 
 exec(user_code)
@@ -74,6 +74,7 @@ def main():
             )
             context.add_dataset(dataset, name, style="bar")
             LOGGER.info("Added " + name)
+        LOGGER.info(f"Starting server on port {server.ctx.config["port"]}...")
         server.start()
 
 
