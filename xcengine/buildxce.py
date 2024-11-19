@@ -145,26 +145,25 @@ def build(
     output: pathlib.Path,
     environment: pathlib.Path,
 ) -> None:
+    image_builder = ImageBuilder(
+        notebook=notebook, output_dir=output, environment=environment
+    )
     args = dict(
-        notebook=notebook,
-        output_dir=output,
         batch=batch,
         server=server,
         from_saved=from_saved,
         keep=keep,
-        environment=environment,
     )
     if workdir:
         os.makedirs(workdir, exist_ok=True)
-        ImageBuilder._build(work_dir=workdir, **args)
+        image_builder.build(work_dir=workdir, **args)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            ImageBuilder._build(work_dir=pathlib.Path(temp_dir), **args)
-
+            image_builder.build(work_dir=pathlib.Path(temp_dir), **args)
 
 
 class ScriptCreator:
-    """Turn a notebook into a set of scripts"""
+    """Turn a Jupyter notebook into a set of scripts"""
 
     def __init__(self, output_dir: pathlib.Path, input_notebook: pathlib.Path):
         self.output_dir = output_dir
@@ -218,25 +217,34 @@ class ScriptCreator:
 
 
 class ImageBuilder:
+    """Builds docker images from notebooks and runs containers from them
 
-    def __init__(self):
-        pass
+    This class creates a docker image from a Jupyter notebook and optionally
+    runs a container initialized from that image.
+    """
 
-    @staticmethod
-    def _build(
-        work_dir: pathlib.Path,
+    def __init__(
+        self,
         notebook: pathlib.Path,
         output_dir: pathlib.Path,
+        environment: pathlib.Path,
+    ):
+        self.notebook = notebook
+        self.output_dir = output_dir
+        self.environment = environment
+
+    def build(
+        self,
+        work_dir: pathlib.Path,
         run_batch: bool,
         run_server: bool,
         from_saved: bool,
         keep: bool,
-        environment: pathlib.Path,
     ) -> None:
-        script_creator = ScriptCreator(work_dir, notebook)
+        script_creator = ScriptCreator(work_dir, self.notebook)
         script_creator.convert_notebook_to_script()
-        if environment:
-            shutil.copy2(environment, work_dir / "environment.yml")
+        if self.environment:
+            shutil.copy2(self.environment, work_dir / "environment.yml")
         else:
             ImageBuilder.export_conda_env(work_dir)
         image = ImageBuilder.build_image(work_dir)
@@ -253,21 +261,28 @@ class ImageBuilder:
             container: Container = client.containers.run(
                 image=image,
                 command=command,
-                ports={8080: 8080},
+                ports={"8080": 8080},
                 remove=False,
                 detach=True,
             )
-            LOGGER.info(f"Waiting for container {container.short_id} to complete.")
+            LOGGER.info(
+                f"Waiting for container {container.short_id} to complete."
+            )
             while container.status in {"created", "running"}:
                 LOGGER.debug(
-                    f"Waiting for {container.short_id} (status: {container.status})"
+                    f"Waiting for {container.short_id} "
+                    f"(status: {container.status})"
                 )
                 time.sleep(2)
                 container.reload()
-            LOGGER.info(f"Container {container.short_id} is {container.status}.")
-            if output_dir:
-                LOGGER.info(f"Copying results from container to {output_dir}...")
-                extract_output_from_container(container, output_dir)
+            LOGGER.info(
+                f"Container {container.short_id} is {container.status}."
+            )
+            if self.output_dir:
+                LOGGER.info(
+                    f"Copying results from container to {self.output_dir}..."
+                )
+                extract_output_from_container(container, self.output_dir)
                 LOGGER.info(f"Results copied.")
             if not run_server and not keep:
                 LOGGER.info(f"Removing container {container.short_id}...")
@@ -281,10 +296,10 @@ class ImageBuilder:
         )
         env_def = yaml.safe_load(conda_process.stdout)
         # Try to remove any dependencies installed from the local filesystem,
-        # which would break environment creation within the container. This won't
-        # work if some of these packages are required for the compute code, but
-        # it's in any case questionable to base a compute engine on non-released
-        # code.
+        # which would break environment creation within the container. This
+        # won't work if some of these packages are required for the compute
+        # code, but it's in any case questionable to base a compute engine on
+        # non-released code.
         deps: list = env_def["dependencies"]
         pip_index, pip_map = next(
             (
@@ -316,6 +331,36 @@ class ImageBuilder:
             deps.append("xcube")
         with open(output_path / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
+
+    @staticmethod
+    def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
+        client = docker.from_env()
+        dockerfile = textwrap.dedent(
+            """
+        FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
+        COPY environment.yml environment.yml
+        RUN micromamba install -y -n base -f environment.yml && \
+        micromamba clean --all --yes
+        COPY user_code.py user_code.py
+        COPY execute.py execute.py
+        CMD python execute.py
+        """
+        )
+        with open(docker_path / "Dockerfile", "w") as fh:
+            fh.write(dockerfile)
+        LOGGER.info("Building Docker image...")
+        try:
+            image, logs = client.images.build(
+                path=str(docker_path),
+                tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
+            )
+        except BuildError as error:
+            LOGGER.error(error.msg)
+            for line in error.build_log:
+                LOGGER.error(line)
+            sys.exit(1)
+        LOGGER.info("Docker image built.")
+        return image
 
 
 class PipInspector:
@@ -359,36 +404,6 @@ class PipInspector:
         ).startswith(
             "file://"
         )
-
-    @staticmethod
-    def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
-        client = docker.from_env()
-        dockerfile = textwrap.dedent(
-            """
-        FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
-        COPY environment.yml environment.yml
-        RUN micromamba install -y -n base -f environment.yml && \
-        micromamba clean --all --yes
-        COPY user_code.py user_code.py
-        COPY execute.py execute.py
-        CMD python execute.py
-        """
-        )
-        with open(docker_path / "Dockerfile", "w") as fh:
-            fh.write(dockerfile)
-        LOGGER.info("Building Docker image...")
-        try:
-            image, logs = client.images.build(
-                path=str(docker_path),
-                tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
-            )
-        except BuildError as error:
-            LOGGER.error(error.msg)
-            for line in error.build_log:
-                LOGGER.error(line)
-            sys.exit(1)
-        LOGGER.info("Docker image built.")
-        return image
 
 
 def _tar_strip(member, path):
