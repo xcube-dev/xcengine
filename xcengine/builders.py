@@ -25,6 +25,7 @@ import docker.models.images
 import nbconvert
 import nbformat
 import yaml
+from docker.models.images import Image
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -119,47 +120,10 @@ class ImageBuilder:
                 f"trying to reproduce current environment in Docker image"
             )
             ImageBuilder.export_conda_env(work_dir)
-        image = ImageBuilder.build_image(work_dir)
+        image: Image = ImageBuilder.build_image(work_dir)
         if run_batch or run_server:
-            client = docker.from_env()
-            LOGGER.info(f"Running container from image {image.short_id}")
-            LOGGER.info(f"Image tags: {' '.join(image.tags)}")
-            command = (
-                ["python", "execute.py"]
-                + (["--batch"] if run_batch else [])
-                + (["--server"] if run_server else [])
-                + (["--from-saved"] if from_saved else [])
-            )
-            container: Container = client.containers.run(
-                image=image,
-                command=command,
-                ports={"8080": 8080},
-                remove=False,
-                detach=True,
-            )
-            LOGGER.info(
-                f"Waiting for container {container.short_id} to complete."
-            )
-            while container.status in {"created", "running"}:
-                LOGGER.debug(
-                    f"Waiting for {container.short_id} "
-                    f"(status: {container.status})"
-                )
-                time.sleep(2)
-                container.reload()
-            LOGGER.info(
-                f"Container {container.short_id} is {container.status}."
-            )
-            if self.output_dir:
-                LOGGER.info(
-                    f"Copying results from container to {self.output_dir}..."
-                )
-                self.extract_output_from_container(container)
-                LOGGER.info(f"Results copied.")
-            if not run_server and not keep:
-                LOGGER.info(f"Removing container {container.short_id}...")
-                container.remove(force=True)
-                LOGGER.info(f"Container {container.short_id} removed.")
+            runner = ContainerRunner(image, self.output_dir)
+            runner.run(run_batch, run_server, from_saved, keep)
 
     @staticmethod
     def export_conda_env(output_path: pathlib.Path) -> None:
@@ -234,6 +198,52 @@ class ImageBuilder:
         LOGGER.info("Docker image built.")
         return image
 
+
+class ContainerRunner:
+
+    def __init__(self, image: Image, output_dir: pathlib.Path):
+        self.image = image
+        self.output_dir = output_dir
+
+    def run(
+        self, run_batch: bool, run_server: bool, from_saved: bool, keep: bool
+    ):
+        client = docker.from_env()
+        LOGGER.info(f"Running container from image {self.image.short_id}")
+        LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
+        command = (
+            ["python", "execute.py"]
+            + (["--batch"] if run_batch else [])
+            + (["--server"] if run_server else [])
+            + (["--from-saved"] if from_saved else [])
+        )
+        container: Container = client.containers.run(
+            image=self.image,
+            command=command,
+            ports={"8080": 8080},
+            remove=False,
+            detach=True,
+        )
+        LOGGER.info(f"Waiting for container {container.short_id} to complete.")
+        while container.status in {"created", "running"}:
+            LOGGER.debug(
+                f"Waiting for {container.short_id} "
+                f"(status: {container.status})"
+            )
+            time.sleep(2)
+            container.reload()
+        LOGGER.info(f"Container {container.short_id} is {container.status}.")
+        if self.output_dir:
+            LOGGER.info(
+                f"Copying results from container to {self.output_dir}..."
+            )
+            self.extract_output_from_container(container)
+            LOGGER.info(f"Results copied.")
+        if not run_server and not keep:
+            LOGGER.info(f"Removing container {container.short_id}...")
+            container.remove(force=True)
+            LOGGER.info(f"Container {container.short_id} removed.")
+
     @staticmethod
     def _tar_strip(member, path):
         member_1 = tarfile.data_filter(member, path)
@@ -294,4 +304,3 @@ class PipInspector:
         ).startswith(
             "file://"
         )
-

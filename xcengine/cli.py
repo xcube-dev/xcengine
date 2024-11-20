@@ -14,6 +14,7 @@ import click
 
 from .builders import ScriptCreator, ImageBuilder
 
+
 @click.group(
     help="Create and run compute engine scripts and containers "
     "from IPython notebooks"
@@ -133,10 +134,7 @@ def build(
         notebook=notebook, output_dir=output, environment=environment
     )
     args = dict(
-        run_batch=batch,
-        run_server=server,
-        from_saved=from_saved,
-        keep=keep,
+        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
     if workdir:
         os.makedirs(workdir, exist_ok=True)
