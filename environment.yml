@@ -12,6 +12,8 @@ dependencies:
   - nbformat
   - pyyaml
   - xcube  # See note below
+  # test dependencies
+  - pytest
 
 # Note: xcube is not required for the conversion itself, but is required
 # to run generated scripts outside containers ("create" mode).
