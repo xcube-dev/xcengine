@@ -104,7 +104,9 @@ def create(
         subprocess.run(args)
 
 
-@cli.command(help="Build a compute engine as a Docker image")
+@cli.command(
+    help="Build, and optionally run, a compute engine as a Docker image"
+)
 @batch_option
 @server_option
 @from_saved_option
@@ -149,8 +151,8 @@ def build(
         notebook=notebook, output_dir=output, environment=environment
     )
     args = dict(
-        batch=batch,
-        server=server,
+        run_batch=batch,
+        run_server=server,
         from_saved=from_saved,
         keep=keep,
     )
@@ -246,6 +248,10 @@ class ImageBuilder:
         if self.environment:
             shutil.copy2(self.environment, work_dir / "environment.yml")
         else:
+            LOGGER.warning(
+                f"No environment file given; "
+                f"trying to reproduce current environment in Docker image"
+            )
             ImageBuilder.export_conda_env(work_dir)
         image = ImageBuilder.build_image(work_dir)
         if run_batch or run_server:
@@ -282,7 +288,7 @@ class ImageBuilder:
                 LOGGER.info(
                     f"Copying results from container to {self.output_dir}..."
                 )
-                extract_output_from_container(container, self.output_dir)
+                self.extract_output_from_container(container)
                 LOGGER.info(f"Results copied.")
             if not run_server and not keep:
                 LOGGER.info(f"Removing container {container.short_id}...")
@@ -362,6 +368,24 @@ class ImageBuilder:
         LOGGER.info("Docker image built.")
         return image
 
+    @staticmethod
+    def _tar_strip(member, path):
+        member_1 = tarfile.data_filter(member, path)
+        member_2 = member.replace(
+            name=pathlib.Path(*pathlib.Path(member_1.path).parts[1:])
+        )
+        return member_2
+
+    def extract_output_from_container(self, container: Container) -> None:
+        bits, stat = container.get_archive("/home/xcube/output")
+        with tempfile.NamedTemporaryFile(suffix=".tar") as temp_tar:
+            # TODO stream this directly to tarfile rather than using temp file
+            with open(temp_tar.name, "wb") as fh:
+                for chunk in bits:
+                    fh.write(chunk)
+            with tarfile.open(temp_tar.name, "r") as tar_fh:
+                tar_fh.extractall(self.output_dir, filter=self._tar_strip)
+
 
 class PipInspector:
     """A simple wrapper around `pip inspect` output
@@ -377,7 +401,7 @@ class PipInspector:
         pip_packages = json.loads(pip_process.stdout)
         self.pkg_index: dict[str, dict] = {}
         for pkg_data in pip_packages["installed"]:
-            self.pkg_index[name := pkg_data["metadata"]["name"]] = pkg_data
+            self.pkg_index[pkg_data["metadata"]["name"]] = pkg_data
 
     def is_local(self, package_spec: str) -> bool:
         """Check if package was installed from local filesystem
@@ -404,27 +428,6 @@ class PipInspector:
         ).startswith(
             "file://"
         )
-
-
-def _tar_strip(member, path):
-    member_1 = tarfile.data_filter(member, path)
-    member_2 = member.replace(
-        name=pathlib.Path(*pathlib.Path(member_1.path).parts[1:])
-    )
-    return member_2
-
-
-def extract_output_from_container(
-    container: Container, dest_dir: pathlib.Path
-) -> None:
-    bits, stat = container.get_archive("/home/xcube/output")
-    with tempfile.NamedTemporaryFile(suffix=".tar") as temp_tar:
-        # TODO stream this directly to tarfile rather than using a temp file
-        with open(temp_tar.name, "wb") as fh:
-            for chunk in bits:
-                fh.write(chunk)
-        with tarfile.open(temp_tar.name, "r") as tar_fh:
-            tar_fh.extractall(dest_dir, filter=_tar_strip)
 
 
 if __name__ == "__main__":
