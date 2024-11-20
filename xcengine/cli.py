@@ -117,7 +117,7 @@ def create(
     "--environment",
     type=click.Path(path_type=pathlib.Path, dir_okay=False, file_okay=True),
     help="Conda environment file to use in docker image. "
-    "If not specified, use the current environment.",
+    "If not specified, try to reproduce the current environment.",
 )
 @notebook_argument
 def build(

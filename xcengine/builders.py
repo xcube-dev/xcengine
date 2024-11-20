@@ -201,14 +201,28 @@ class ImageBuilder:
 
 class ContainerRunner:
 
-    def __init__(self, image: Image, output_dir: pathlib.Path):
-        self.image = image
+    def __init__(self, image: Image | str, output_dir: pathlib.Path, client: docker.DockerClient = None):
+        self._client = client
+        match image:
+            case Image():
+                self.image = image
+            case str():
+                self.image = self.client.images.get(image)
+            case _:
+                raise ValueError(
+                    f'Invalid type "{type(image).__name__}" for image'
+                )
         self.output_dir = output_dir
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = docker.from_env()
+        return self._client
 
     def run(
         self, run_batch: bool, run_server: bool, from_saved: bool, keep: bool
     ):
-        client = docker.from_env()
         LOGGER.info(f"Running container from image {self.image.short_id}")
         LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
         command = (
@@ -217,7 +231,7 @@ class ContainerRunner:
             + (["--server"] if run_server else [])
             + (["--from-saved"] if from_saved else [])
         )
-        container: Container = client.containers.run(
+        container: Container = self.client.containers.run(
             image=self.image,
             command=command,
             ports={"8080": 8080},
