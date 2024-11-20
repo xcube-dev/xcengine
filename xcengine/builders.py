@@ -201,7 +201,12 @@ class ImageBuilder:
 
 class ContainerRunner:
 
-    def __init__(self, image: Image | str, output_dir: pathlib.Path, client: docker.DockerClient = None):
+    def __init__(
+        self,
+        image: Image | str,
+        output_dir: pathlib.Path,
+        client: docker.DockerClient = None,
+    ):
         self._client = client
         match image:
             case Image():
