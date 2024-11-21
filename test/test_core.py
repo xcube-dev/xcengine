@@ -10,7 +10,7 @@ import xcengine.core
 def test_init_runner_invalid_image_type():
     with pytest.raises(ValueError, match='Invalid type "int"'):
         # noinspection PyTypeChecker
-        xcengine.builders.ContainerRunner(666, pathlib.Path("/foo"))
+        xcengine.core.ContainerRunner(666, pathlib.Path("/foo"))
 
 
 def test_init_runner_with_string():
@@ -23,14 +23,14 @@ def test_init_runner_with_string():
         return image_mock
 
     client_mock.images.get = get_mock
-    runner = xcengine.builders.ContainerRunner(
+    runner = xcengine.core.ContainerRunner(
         image_name, pathlib.Path("/foo"), client=client_mock
     )
     assert image_mock == runner.image
 
 
 def test_init_runner_with_image():
-    runner = xcengine.builders.ContainerRunner(
+    runner = xcengine.core.ContainerRunner(
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
     assert runner.image == image
