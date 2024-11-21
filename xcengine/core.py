@@ -94,12 +94,12 @@ class ImageBuilder:
         notebook: pathlib.Path,
         output_dir: pathlib.Path,
         environment: pathlib.Path,
-        work_dir: pathlib.Path
+        build_dir: pathlib.Path,
     ):
         self.notebook = notebook
         self.output_dir = output_dir
         self.environment = environment
-        self.work_dir = work_dir
+        self.build_dir = build_dir
 
     def build(
         self,
@@ -108,10 +108,10 @@ class ImageBuilder:
         from_saved: bool,
         keep: bool,
     ) -> None:
-        script_creator = ScriptCreator(self.work_dir, self.notebook)
+        script_creator = ScriptCreator(self.build_dir, self.notebook)
         script_creator.convert_notebook_to_script()
         if self.environment:
-            shutil.copy2(self.environment, self.work_dir / "environment.yml")
+            shutil.copy2(self.environment, self.build_dir / "environment.yml")
         else:
             LOGGER.warning(
                 f"No environment file given; "
@@ -162,7 +162,7 @@ class ImageBuilder:
         ):
             # We need xcube for the server and viewer functionality
             deps.append("xcube")
-        with open(self.work_dir / "environment.yml", "w") as fh:
+        with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
 
     def build_image(self) -> docker.models.images.Image:
@@ -178,12 +178,12 @@ class ImageBuilder:
         CMD python execute.py
         """
         )
-        with open(self.work_dir / "Dockerfile", "w") as fh:
+        with open(self.build_dir / "Dockerfile", "w") as fh:
             fh.write(dockerfile)
         LOGGER.info("Building Docker image...")
         try:
             image, logs = client.images.build(
-                path=str(self.work_dir),
+                path=str(self.build_dir),
                 tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
             )
         except BuildError as error:
@@ -284,9 +284,9 @@ class ChunkStream(io.RawIOBase):
     def readinto(self, bytebuffer):
         try:
             next_chunk = self.remainder or next(self.generator)
-            data = next_chunk[:len(bytebuffer)]
-            self.remainder = next_chunk[len(bytebuffer):]
-            bytebuffer[:len(data)] = data
+            data = next_chunk[: len(bytebuffer)]
+            self.remainder = next_chunk[len(bytebuffer) :]
+            bytebuffer[: len(data)] = data
             return len(data)
         except StopIteration:
             return 0

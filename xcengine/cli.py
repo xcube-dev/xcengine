@@ -94,10 +94,10 @@ def create(
 @server_option
 @from_saved_option
 @click.option(
-    "-w",
-    "--workdir",
+    "-b",
+    "--build-dir",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Working directory to use for preparing the Docker image. If not "
+    help="Build directory to use for preparing the Docker image. If not "
     "specified, an automatically created temporary directory will be used.",
 )
 @click.option(
@@ -125,28 +125,30 @@ def build(
     server: bool,
     from_saved: bool,
     keep: bool,
-    workdir: pathlib.Path,
+    build_dir: pathlib.Path,
     notebook: pathlib.Path,
     output: pathlib.Path,
     environment: pathlib.Path,
 ) -> None:
-    init_args = dict(notebook=notebook, output_dir=output, environment=environment)
+    init_args = dict(
+        notebook=notebook, output_dir=output, environment=environment
+    )
     build_args = dict(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
-    if workdir:
-        image_builder = ImageBuilder(work_dir=workdir, **init_args)
-        os.makedirs(workdir, exist_ok=True)
+    if build_dir:
+        image_builder = ImageBuilder(build_dir=build_dir, **init_args)
+        os.makedirs(build_dir, exist_ok=True)
         image_builder.build(**build_args)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_builder = ImageBuilder(work_dir=pathlib.Path(temp_dir), **init_args)
+            image_builder = ImageBuilder(
+                build_dir=pathlib.Path(temp_dir), **init_args
+            )
             image_builder.build(**build_args)
 
 
-@cli.command(
-    help="Run a compute engine as a Docker container"
-)
+@cli.command(help="Run a compute engine as a Docker container")
 @batch_option
 @server_option
 @from_saved_option
@@ -162,10 +164,7 @@ def build(
     is_flag=True,
     help="Keep container after it has finished running.",
 )
-@click.argument(
-    "image",
-    type=str
-)
+@click.argument("image", type=str)
 def run(
     batch: bool,
     server: bool,
@@ -174,9 +173,7 @@ def run(
     image: str,
     output: pathlib.Path,
 ) -> None:
-    runner = ContainerRunner(
-        image=image, output_dir=output
-    )
+    runner = ContainerRunner(image=image, output_dir=output)
     runner.run(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
