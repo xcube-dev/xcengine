@@ -2,11 +2,11 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
+import io
 import json
 import shutil
 import sys
 import tarfile
-import tempfile
 import subprocess
 import logging
 import pathlib
@@ -14,7 +14,7 @@ import textwrap
 import time
 import uuid
 from datetime import datetime
-from collections.abc import Mapping
+from collections.abc import Mapping, Generator
 
 import docker
 from docker.errors import BuildError
@@ -271,13 +271,30 @@ class ContainerRunner:
 
     def extract_output_from_container(self, container: Container) -> None:
         bits, stat = container.get_archive("/home/mambauser/output")
-        with tempfile.NamedTemporaryFile(suffix=".tar") as temp_tar:
-            # TODO stream this directly to tarfile rather than using temp file
-            with open(temp_tar.name, "wb") as fh:
-                for chunk in bits:
-                    fh.write(chunk)
-            with tarfile.open(temp_tar.name, "r") as tar_fh:
-                tar_fh.extractall(self.output_dir, filter=self._tar_strip)
+        reader = io.BufferedReader(ChunkStream(bits))
+        with tarfile.open(name=None, mode="r|", fileobj=reader) as tar_fh:
+            tar_fh.extractall(self.output_dir, filter=self._tar_strip)
+
+
+class ChunkStream(io.RawIOBase):
+    """A binary stream backed by a generator of bytes objects"""
+
+    def __init__(self, generator: Generator[bytes]):
+        self.generator = generator
+        self.remainder = None
+
+    def readinto(self, bytebuffer):
+        try:
+            next_chunk = self.remainder or next(self.generator)
+            data = next_chunk[:len(bytebuffer)]
+            self.remainder = next_chunk[len(bytebuffer):]
+            bytebuffer[:len(data)] = data
+            return len(data)
+        except StopIteration:
+            return 0
+
+    def readable(self):
+        return True
 
 
 class PipInspector:
