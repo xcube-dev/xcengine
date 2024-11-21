@@ -41,7 +41,7 @@ exclude = [
 ]
 
 [project.scripts]
-buildxce = "xcengine.cli:cli"
+xcetool = "xcengine.cli:cli"
 
 [project.optional-dependencies]
 dev = [
