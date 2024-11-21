@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import docker.models.images
 
-import xcengine.builders
+import xcengine.core
 
 
 def test_init_runner_invalid_image_type():
