@@ -130,18 +130,18 @@ def build(
     output: pathlib.Path,
     environment: pathlib.Path,
 ) -> None:
-    image_builder = ImageBuilder(
-        notebook=notebook, output_dir=output, environment=environment
-    )
-    args = dict(
+    init_args = dict(notebook=notebook, output_dir=output, environment=environment)
+    build_args = dict(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
     if workdir:
+        image_builder = ImageBuilder(work_dir=workdir, **init_args)
         os.makedirs(workdir, exist_ok=True)
-        image_builder.build(work_dir=workdir, **args)
+        image_builder.build(**build_args)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            image_builder.build(work_dir=pathlib.Path(temp_dir), **args)
+            image_builder = ImageBuilder(work_dir=pathlib.Path(temp_dir), **init_args)
+            image_builder.build(**build_args)
 
 
 @cli.command(

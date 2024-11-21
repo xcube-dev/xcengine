@@ -19,11 +19,10 @@ from collections.abc import Mapping, Generator
 import docker
 from docker.errors import BuildError
 from docker.models.containers import Container
-import docker.models.images
+from docker.models.images import Image
 import nbconvert
 import nbformat
 import yaml
-from docker.models.images import Image
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -95,36 +94,36 @@ class ImageBuilder:
         notebook: pathlib.Path,
         output_dir: pathlib.Path,
         environment: pathlib.Path,
+        work_dir: pathlib.Path
     ):
         self.notebook = notebook
         self.output_dir = output_dir
         self.environment = environment
+        self.work_dir = work_dir
 
     def build(
         self,
-        work_dir: pathlib.Path,
         run_batch: bool,
         run_server: bool,
         from_saved: bool,
         keep: bool,
     ) -> None:
-        script_creator = ScriptCreator(work_dir, self.notebook)
+        script_creator = ScriptCreator(self.work_dir, self.notebook)
         script_creator.convert_notebook_to_script()
         if self.environment:
-            shutil.copy2(self.environment, work_dir / "environment.yml")
+            shutil.copy2(self.environment, self.work_dir / "environment.yml")
         else:
             LOGGER.warning(
                 f"No environment file given; "
                 f"trying to reproduce current environment in Docker image"
             )
-            ImageBuilder.export_conda_env(work_dir)
-        image: Image = ImageBuilder.build_image(work_dir)
+            self.export_conda_env()
+        image: Image = self.build_image()
         if run_batch or run_server:
             runner = ContainerRunner(image, self.output_dir)
             runner.run(run_batch, run_server, from_saved, keep)
 
-    @staticmethod
-    def export_conda_env(output_path: pathlib.Path) -> None:
+    def export_conda_env(self) -> None:
         conda_process = subprocess.run(
             ["conda", "env", "export"], capture_output=True
         )
@@ -163,11 +162,10 @@ class ImageBuilder:
         ):
             # We need xcube for the server and viewer functionality
             deps.append("xcube")
-        with open(output_path / "environment.yml", "w") as fh:
+        with open(self.work_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
 
-    @staticmethod
-    def build_image(docker_path: pathlib.Path) -> docker.models.images.Image:
+    def build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
         dockerfile = textwrap.dedent(
             """
@@ -180,12 +178,12 @@ class ImageBuilder:
         CMD python execute.py
         """
         )
-        with open(docker_path / "Dockerfile", "w") as fh:
+        with open(self.work_dir / "Dockerfile", "w") as fh:
             fh.write(dockerfile)
         LOGGER.info("Building Docker image...")
         try:
             image, logs = client.images.build(
-                path=str(docker_path),
+                path=str(self.work_dir),
                 tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
             )
         except BuildError as error:
