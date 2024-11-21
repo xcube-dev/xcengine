@@ -116,8 +116,16 @@ def create(
     "-e",
     "--environment",
     type=click.Path(path_type=pathlib.Path, dir_okay=False, file_okay=True),
-    help="Conda environment file to use in docker image. "
+    help="Conda environment file to use in Docker image. "
     "If not specified, try to reproduce the current environment.",
+)
+@click.option(
+    "-t",
+    "--tag",
+    type=str,
+    default=None,
+    help="Tag to apply to the Docker image. "
+    "If not specified, a timestamp-based tag will be generated automatically"
 )
 @notebook_argument
 def build(
@@ -129,9 +137,10 @@ def build(
     notebook: pathlib.Path,
     output: pathlib.Path,
     environment: pathlib.Path,
+    tag: str
 ) -> None:
     init_args = dict(
-        notebook=notebook, output_dir=output, environment=environment
+        notebook=notebook, output_dir=output, environment=environment, tag=tag
     )
     build_args = dict(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep

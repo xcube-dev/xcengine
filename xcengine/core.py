@@ -95,11 +95,13 @@ class ImageBuilder:
         output_dir: pathlib.Path,
         environment: pathlib.Path,
         build_dir: pathlib.Path,
+        tag: str,
     ):
         self.notebook = notebook
         self.output_dir = output_dir
         self.environment = environment
         self.build_dir = build_dir
+        self.tag = tag
 
     def build(
         self,
@@ -180,11 +182,16 @@ class ImageBuilder:
         )
         with open(self.build_dir / "Dockerfile", "w") as fh:
             fh.write(dockerfile)
-        LOGGER.info("Building Docker image...")
+        if self.tag:
+            tag = self.tag
+            LOGGER.info(f"Building image with specified tag {tag}...")
+        else:
+            tag = f"xcengine:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}"
+            LOGGER.info(f"Building image with default tag {tag}...")
         try:
             image, logs = client.images.build(
                 path=str(self.build_dir),
-                tag=f"xce2:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}",
+                tag=tag,
             )
         except BuildError as error:
             LOGGER.error(error.msg)
