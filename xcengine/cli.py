@@ -12,7 +12,7 @@ import tempfile
 
 import click
 
-from .builders import ScriptCreator, ImageBuilder
+from .builders import ScriptCreator, ImageBuilder, ContainerRunner
 
 
 @click.group(
@@ -142,6 +142,44 @@ def build(
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_builder.build(work_dir=pathlib.Path(temp_dir), **args)
+
+
+@cli.command(
+    help="Run a compute engine as a Docker container"
+)
+@batch_option
+@server_option
+@from_saved_option
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+    help="Write output data to this directory.",
+)
+@click.option(
+    "-k",
+    "--keep",
+    is_flag=True,
+    help="Keep container after it has finished running.",
+)
+@click.argument(
+    "image",
+    type=str
+)
+def run(
+    batch: bool,
+    server: bool,
+    from_saved: bool,
+    keep: bool,
+    image: str,
+    output: pathlib.Path,
+) -> None:
+    runner = ContainerRunner(
+        image=image, output_dir=output
+    )
+    runner.run(
+        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
+    )
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@ def main():
 
     if args.batch:
         parent_path = pathlib.Path(sys.argv[0]).parent
-        output_path = parent_path / "output"
+        output_path = pathlib.Path.home() / "output"
         output_path.mkdir(parents=True, exist_ok=True)
         for name, dataset in datasets.items():
             dataset_path = output_path / (name + ".zarr")

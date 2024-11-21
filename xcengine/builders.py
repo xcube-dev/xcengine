@@ -272,7 +272,7 @@ class ContainerRunner:
         return member_2
 
     def extract_output_from_container(self, container: Container) -> None:
-        bits, stat = container.get_archive("/home/xcube/output")
+        bits, stat = container.get_archive("/home/mambauser/output")
         with tempfile.NamedTemporaryFile(suffix=".tar") as temp_tar:
             # TODO stream this directly to tarfile rather than using temp file
             with open(temp_tar.name, "wb") as fh:
