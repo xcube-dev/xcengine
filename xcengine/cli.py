@@ -125,7 +125,7 @@ def create(
     type=str,
     default=None,
     help="Tag to apply to the Docker image. "
-    "If not specified, a timestamp-based tag will be generated automatically"
+    "If not specified, a timestamp-based tag will be generated automatically",
 )
 @notebook_argument
 def build(
@@ -137,7 +137,7 @@ def build(
     notebook: pathlib.Path,
     output: pathlib.Path,
     environment: pathlib.Path,
-    tag: str
+    tag: str,
 ) -> None:
     init_args = dict(
         notebook=notebook, output_dir=output, environment=environment, tag=tag

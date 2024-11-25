@@ -34,3 +34,17 @@ def test_init_runner_with_image():
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
     assert runner.image == image
+
+
+def test_parameters_init():
+    assert xcengine.core.NotebookParameters("""
+some_int = 1
+some_float = 3.14159
+some_string = "foo"
+some_bool = False
+    """).vars == {
+        "some_int": (int, 1),
+        "some_float": (float, 3.14159),
+        "some_string": (str, "foo"),
+        "some_bool": (bool, False)
+    }

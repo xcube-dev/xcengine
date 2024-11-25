@@ -15,6 +15,7 @@ import time
 import uuid
 from datetime import datetime
 from collections.abc import Mapping, Generator
+from typing import Any
 
 import docker
 from docker.errors import BuildError
@@ -41,7 +42,7 @@ class ScriptCreator:
             self.clear_output_directory()
         with open(self.input_notebook) as fh:
             notebook = nbformat.read(fh, as_version=4)
-        self.insert_params_cell(notebook)
+        self.process_params_cell(notebook)
         exporter = nbconvert.PythonExporter()
         (body, resources) = exporter.from_notebook_node(notebook)
         with open(self.output_dir / "user_code.py", "w") as fh:
@@ -51,17 +52,18 @@ class ScriptCreator:
         with open(self.output_dir / "execute.py", "w") as fh:
             fh.write(wrapper)
 
-    @staticmethod
-    def insert_params_cell(notebook: nbformat.NotebookNode) -> None:
+    def process_params_cell(self, notebook: nbformat.NotebookNode) -> None:
         params_cell_index = None
         for i, cell in enumerate(notebook.cells):
             if (
                 hasattr(md := cell.metadata, "tags")
                 and "parameters" in md.tags
             ):
+                params_cell = cell
                 params_cell_index = i
                 break
         if params_cell_index is not None:
+            nb_params = NotebookParameters(notebook.cells[params_cell_index])
             notebook.cells.insert(
                 params_cell_index + 1,
                 {
@@ -73,6 +75,47 @@ class ScriptCreator:
                     "source": "__xce_set_params()",
                 },
             )
+
+    def write_cwl(self):
+        # TODO flesh out this skeleton
+        cwl = {
+            "cwlVersion": "v1.0",
+            "$namespaces": {"s": "https://schema.org/"},
+            "s:softwareVersion": "1.0.0",
+            "schemas": [
+                "http://schema.org/version/9.0/schemaorg-current-http.rdf"
+            ],
+            "$graph": [
+                {
+                    "class": "Workflow",
+                    "label": "xcengine notebook",
+                    "doc": "xcengine notebook",
+                    "id": "main",
+                    "requirements": [],
+                    "inputs": {},
+                    "outputs": [],
+                    "steps": {
+                        "run_script": {
+                            "run": "#xce_script",
+                            "in": {},
+                            "out": [],
+                        }
+                    },
+                },
+                {
+                    "class": "CommandLineTool",
+                    "id": "xce_script",
+                    "requirements": {"DockerRequirement": {"dockerPull": ""}},
+                    "baseCommand": [
+                        "python3",
+                        "execute.py",
+                    ],
+                    "arguments": [],
+                    "inputs": {},
+                    "outputs": {},
+                },
+            ],
+        }
 
     def clear_output_directory(self) -> None:
         for path in self.output_dir.iterdir():
@@ -343,3 +386,16 @@ class PipInspector:
         ).startswith(
             "file://"
         )
+
+
+class NotebookParameters:
+
+    def __init__(self, code: str):
+        self.vars = self.extract_variables(code)
+
+    @staticmethod
+    def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
+        _old_locals = set(locals().keys())
+        exec(code)
+        newvars = locals().keys() - _old_locals - {"_old_locals"}
+        return {k: (type(v := locals()[k]), v) for k in newvars}
