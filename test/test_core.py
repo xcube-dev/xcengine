@@ -36,15 +36,50 @@ def test_init_runner_with_image():
     assert runner.image == image
 
 
-def test_parameters_init():
-    assert xcengine.core.NotebookParameters("""
-some_int = 1
+@pytest.fixture
+def notebook_parameters():
+    return xcengine.core.NotebookParameters("""
+some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
-    """).vars == {
-        "some_int": (int, 1),
+    """)
+
+
+def test_parameters_init(notebook_parameters):
+    assert notebook_parameters.vars == {
+        "some_int": (int, 42),
         "some_float": (float, 3.14159),
         "some_string": (str, "foo"),
         "some_bool": (bool, False)
+    }
+
+
+def test_parameters_get_workflow_inputs(notebook_parameters):
+    assert notebook_parameters.get_cwl_workflow_inputs() == {
+        "some_int": {
+            "type": "long",
+            "default": 42,
+            "label": "some_int",
+            "doc": "some_int"
+        },
+        "some_float": {
+            "type": "double",
+            "default": 3.14159,
+            "label": "some_float",
+            "doc": "some_float"
+        },
+        "some_string": {
+            "type": "string",
+            "default": "foo",
+            "label": "some_string",
+            "doc": "some_string"
+        },
+        "some_bool": {
+            "type": "boolean",
+            "default": False,
+            "label": "some_bool",
+            "doc": "some_bool"
+        },
+
     }

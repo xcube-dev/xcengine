@@ -2,6 +2,7 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
+import builtins
 import io
 import json
 import shutil
@@ -63,7 +64,7 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
-            nb_params = NotebookParameters(notebook.cells[params_cell_index])
+            self.nb_params = NotebookParameters(notebook.cells[params_cell_index])
             notebook.cells.insert(
                 params_cell_index + 1,
                 {
@@ -92,7 +93,7 @@ class ScriptCreator:
                     "doc": "xcengine notebook",
                     "id": "main",
                     "requirements": [],
-                    "inputs": {},
+                    "inputs": self.nb_params.get_cwl_workflow_inputs(),
                     "outputs": [],
                     "steps": {
                         "run_script": {
@@ -399,3 +400,32 @@ class NotebookParameters:
         exec(code)
         newvars = locals().keys() - _old_locals - {"_old_locals"}
         return {k: (type(v := locals()[k]), v) for k in newvars}
+
+    def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
+        return {
+            var_name: self.get_cwl_workflow_input(var_name)
+            for var_name in self.vars
+        }
+
+    def get_cwl_workflow_input(self, var_name: str) -> dict[str, Any]:
+        type_, default_ = self.vars[var_name]
+        return {
+            "type": self.cwl_type(type_),
+            "default": default_,
+            "doc": var_name,
+            "label": var_name
+        }
+
+    @staticmethod
+    def cwl_type(type_: type) -> str:
+        match type_:
+            case builtins.int:
+                return "long"
+            case builtins.float:
+                return "double"
+            case builtins.str:
+                return "string"
+            case builtins.bool:
+                return "boolean"
+            case _:
+                raise ValueError(f"Unhandled type {type_}")
