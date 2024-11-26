@@ -66,7 +66,7 @@ notebook_argument = click.argument(
     "output_dir",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
 )
-def create(
+def make_script(
     batch: bool,
     server: bool,
     from_saved: bool,
@@ -87,8 +87,15 @@ def create(
         subprocess.run(args)
 
 
-@cli.command(
-    help="Build, and optionally run, a compute engine as a Docker image"
+@cli.group(
+    name="image",
+    help="Build and run compute engine container images"
+)
+def image_cli():
+    pass
+
+@image_cli.command(
+    help="Build a compute engine as a Docker image"
 )
 @batch_option
 @server_option
@@ -157,7 +164,7 @@ def build(
             image_builder.build(**build_args)
 
 
-@cli.command(help="Run a compute engine as a Docker container")
+@image_cli.command(help="Run a compute engine as a Docker container")
 @batch_option
 @server_option
 @from_saved_option
