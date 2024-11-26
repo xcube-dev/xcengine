@@ -83,3 +83,39 @@ def test_parameters_get_workflow_inputs(notebook_parameters):
         },
 
     }
+
+
+def test_parameters_get_commandline_inputs(notebook_parameters):
+    assert notebook_parameters.get_cwl_commandline_inputs() == {
+        "some_int": {
+            "type": "long",
+            "default": 42,
+            "label": "some_int",
+            "doc": "some_int",
+            "inputBinding": {"prefix": "--some-int"}
+        },
+        "some_float": {
+            "type": "double",
+            "default": 3.14159,
+            "label": "some_float",
+            "doc": "some_float",
+            "inputBinding": {"prefix": "--some-float"}
+    },
+        "some_string": {
+            "type": "string",
+            "default": "foo",
+            "label": "some_string",
+            "doc": "some_string",
+            "inputBinding": {"prefix": "--some-string"}
+
+        },
+        "some_bool": {
+            "type": "boolean",
+            "default": False,
+            "label": "some_bool",
+            "doc": "some_bool",
+            "inputBinding": {"prefix": "--some-bool"}
+
+        },
+
+    }

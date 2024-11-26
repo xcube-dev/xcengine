@@ -36,11 +36,25 @@ server_option = click.option(
     help="Run as xcube server script after creating",
 )
 
+output_option = click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+    help="Write output data to this directory.",
+)
+
 from_saved_option = click.option(
     "-f",
     "--from-saved",
     is_flag=True,
     help="If batch and server both used, serve datasets from saved Zarrs",
+)
+
+keep_option = click.option(
+    "-k",
+    "--keep",
+    is_flag=True,
+    help="Keep container after it has finished running.",
 )
 
 notebook_argument = click.argument(
@@ -74,8 +88,10 @@ def make_script(
     notebook: pathlib.Path,
     output_dir: pathlib.Path,
 ) -> None:
-    script_creator = ScriptCreator(output_dir, notebook)
-    script_creator.convert_notebook_to_script(clear_output=clear)
+    script_creator = ScriptCreator(notebook)
+    script_creator.convert_notebook_to_script(
+        output_dir=output_dir, clear_output=clear
+    )
     if batch or server:
         args = ["python3", output_dir / "execute.py"]
         if batch:
@@ -87,15 +103,13 @@ def make_script(
         subprocess.run(args)
 
 
-@cli.group(
-    name="image",
-    help="Build and run compute engine container images"
-)
+@cli.group(name="image", help="Build and run compute engine container images")
 def image_cli():
     pass
 
+
 @image_cli.command(
-    help="Build a compute engine as a Docker image"
+    help="Build, and optionally run, a compute engine as a Docker image"
 )
 @batch_option
 @server_option
@@ -107,18 +121,7 @@ def image_cli():
     help="Build directory to use for preparing the Docker image. If not "
     "specified, an automatically created temporary directory will be used.",
 )
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Write output data to this directory.",
-)
-@click.option(
-    "-k",
-    "--keep",
-    is_flag=True,
-    help="Keep container after it has finished running.",
-)
+@keep_option
 @click.option(
     "-e",
     "--environment",
@@ -126,6 +129,7 @@ def image_cli():
     help="Conda environment file to use in Docker image. "
     "If not specified, try to reproduce the current environment.",
 )
+@output_option
 @click.option(
     "-t",
     "--tag",
@@ -164,22 +168,12 @@ def build(
             image_builder.build(**build_args)
 
 
-@image_cli.command(help="Run a compute engine as a Docker container")
+@image_cli.command(help="Run a compute engine image as a Docker container")
 @batch_option
 @server_option
 @from_saved_option
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Write output data to this directory.",
-)
-@click.option(
-    "-k",
-    "--keep",
-    is_flag=True,
-    help="Keep container after it has finished running.",
-)
+@output_option
+@keep_option
 @click.argument("image", type=str)
 def run(
     batch: bool,
@@ -193,6 +187,13 @@ def run(
     runner.run(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
+
+
+@cli.command(help="Create an Earth Observation Application Package")
+@notebook_argument
+def eoap(notebook: pathlib.Path) -> None:
+    script_creator = ScriptCreator(notebook)
+    script_creator.write_cwl()
 
 
 if __name__ == "__main__":

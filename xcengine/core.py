@@ -30,42 +30,101 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+class NotebookParameters:
+
+    def __init__(self, code: str):
+        self.vars = self.extract_variables(code)
+
+    @staticmethod
+    def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
+        _old_locals = set(locals().keys())
+        exec(code)
+        newvars = locals().keys() - _old_locals - {"_old_locals"}
+        return {k: (type(v := locals()[k]), v) for k in newvars}
+
+    def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
+        return {
+            var_name: self.get_cwl_workflow_input(var_name)
+            for var_name in self.vars
+        }
+
+    def get_cwl_commandline_inputs(self) -> dict[str, dict[str, Any]]:
+        return {
+            var_name: self.get_cwl_commandline_input(var_name)
+            for var_name in self.vars
+        }
+
+    def get_cwl_workflow_input(self, var_name: str) -> dict[str, Any]:
+        type_, default_ = self.vars[var_name]
+        return {
+            "type": self.cwl_type(type_),
+            "default": default_,
+            "doc": var_name,
+            "label": var_name,
+        }
+
+    def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
+        return self.get_cwl_workflow_input(var_name) | {
+            "inputBinding": {
+                "prefix": f"--{var_name.replace("_", "-")}"
+            }
+        }
+
+    @staticmethod
+    def cwl_type(type_: type) -> str:
+        match type_:
+            case builtins.int:
+                return "long"
+            case builtins.float:
+                return "double"
+            case builtins.str:
+                return "string"
+            case builtins.bool:
+                return "boolean"
+            case _:
+                raise ValueError(f"Unhandled type {type_}")
+
+
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
-    def __init__(self, output_dir: pathlib.Path, input_notebook: pathlib.Path):
-        self.output_dir = output_dir
-        self.input_notebook = input_notebook
+    notebook: nbformat.NotebookNode
+    nb_params: NotebookParameters
 
-    def convert_notebook_to_script(self, clear_output=False) -> None:
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, nb_path: pathlib.Path):
+        with open(nb_path) as fh:
+            self.notebook = nbformat.read(fh, as_version=4)
+        self.process_params_cell()
+
+    def convert_notebook_to_script(
+        self, output_dir: pathlib.Path, clear_output=False
+    ) -> None:
+        output_dir.mkdir(parents=True, exist_ok=True)
         if clear_output:
-            self.clear_output_directory()
-        with open(self.input_notebook) as fh:
-            notebook = nbformat.read(fh, as_version=4)
-        self.process_params_cell(notebook)
+            self.clear_directory(output_dir)
         exporter = nbconvert.PythonExporter()
-        (body, resources) = exporter.from_notebook_node(notebook)
-        with open(self.output_dir / "user_code.py", "w") as fh:
+        (body, resources) = exporter.from_notebook_node(self.notebook)
+        with open(output_dir / "user_code.py", "w") as fh:
             fh.write(body)
         with open(pathlib.Path(__file__).parent / "wrapper.py", "r") as fh:
             wrapper = fh.read()
-        with open(self.output_dir / "execute.py", "w") as fh:
+        with open(output_dir / "execute.py", "w") as fh:
             fh.write(wrapper)
 
-    def process_params_cell(self, notebook: nbformat.NotebookNode) -> None:
+    def process_params_cell(self) -> None:
         params_cell_index = None
-        for i, cell in enumerate(notebook.cells):
+        for i, cell in enumerate(self.notebook.cells):
             if (
                 hasattr(md := cell.metadata, "tags")
                 and "parameters" in md.tags
             ):
-                params_cell = cell
                 params_cell_index = i
                 break
         if params_cell_index is not None:
-            self.nb_params = NotebookParameters(notebook.cells[params_cell_index])
-            notebook.cells.insert(
+            self.nb_params = NotebookParameters(
+                self.notebook.cells[params_cell_index].source
+            )
+            self.notebook.cells.insert(
                 params_cell_index + 1,
                 {
                     "cell_type": "code",
@@ -106,20 +165,25 @@ class ScriptCreator:
                 {
                     "class": "CommandLineTool",
                     "id": "xce_script",
-                    "requirements": {"DockerRequirement": {"dockerPull": ""}},
+                    "requirements": {
+                        "DockerRequirement":
+                            {"dockerPull": "FIXME"}  # TODO set docker tag
+                    },
                     "baseCommand": [
                         "python3",
                         "execute.py",
                     ],
                     "arguments": [],
-                    "inputs": {},
+                    "inputs": self.nb_params.get_cwl_commandline_inputs(),
                     "outputs": {},
                 },
             ],
         }
+        print(yaml.safe_dump(cwl))
 
-    def clear_output_directory(self) -> None:
-        for path in self.output_dir.iterdir():
+    @staticmethod
+    def clear_directory(directory: pathlib.Path) -> None:
+        for path in directory.iterdir():
             if path.is_dir():
                 shutil.rmtree(path)
             else:
@@ -154,8 +218,8 @@ class ImageBuilder:
         from_saved: bool,
         keep: bool,
     ) -> None:
-        script_creator = ScriptCreator(self.build_dir, self.notebook)
-        script_creator.convert_notebook_to_script()
+        script_creator = ScriptCreator(self.notebook)
+        script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
             shutil.copy2(self.environment, self.build_dir / "environment.yml")
         else:
@@ -389,43 +453,3 @@ class PipInspector:
         )
 
 
-class NotebookParameters:
-
-    def __init__(self, code: str):
-        self.vars = self.extract_variables(code)
-
-    @staticmethod
-    def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
-        _old_locals = set(locals().keys())
-        exec(code)
-        newvars = locals().keys() - _old_locals - {"_old_locals"}
-        return {k: (type(v := locals()[k]), v) for k in newvars}
-
-    def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
-        return {
-            var_name: self.get_cwl_workflow_input(var_name)
-            for var_name in self.vars
-        }
-
-    def get_cwl_workflow_input(self, var_name: str) -> dict[str, Any]:
-        type_, default_ = self.vars[var_name]
-        return {
-            "type": self.cwl_type(type_),
-            "default": default_,
-            "doc": var_name,
-            "label": var_name
-        }
-
-    @staticmethod
-    def cwl_type(type_: type) -> str:
-        match type_:
-            case builtins.int:
-                return "long"
-            case builtins.float:
-                return "double"
-            case builtins.str:
-                return "string"
-            case builtins.bool:
-                return "boolean"
-            case _:
-                raise ValueError(f"Unhandled type {type_}")
