@@ -5,6 +5,7 @@ from unittest.mock import Mock
 import docker.models.images
 
 import xcengine.core
+import xcengine.parameters
 
 
 def test_init_runner_invalid_image_type():
@@ -34,88 +35,3 @@ def test_init_runner_with_image():
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
     assert runner.image == image
-
-
-@pytest.fixture
-def notebook_parameters():
-    return xcengine.core.NotebookParameters("""
-some_int = 42
-some_float = 3.14159
-some_string = "foo"
-some_bool = False
-    """)
-
-
-def test_parameters_init(notebook_parameters):
-    assert notebook_parameters.vars == {
-        "some_int": (int, 42),
-        "some_float": (float, 3.14159),
-        "some_string": (str, "foo"),
-        "some_bool": (bool, False)
-    }
-
-
-def test_parameters_get_workflow_inputs(notebook_parameters):
-    assert notebook_parameters.get_cwl_workflow_inputs() == {
-        "some_int": {
-            "type": "long",
-            "default": 42,
-            "label": "some_int",
-            "doc": "some_int"
-        },
-        "some_float": {
-            "type": "double",
-            "default": 3.14159,
-            "label": "some_float",
-            "doc": "some_float"
-        },
-        "some_string": {
-            "type": "string",
-            "default": "foo",
-            "label": "some_string",
-            "doc": "some_string"
-        },
-        "some_bool": {
-            "type": "boolean",
-            "default": False,
-            "label": "some_bool",
-            "doc": "some_bool"
-        },
-
-    }
-
-
-def test_parameters_get_commandline_inputs(notebook_parameters):
-    assert notebook_parameters.get_cwl_commandline_inputs() == {
-        "some_int": {
-            "type": "long",
-            "default": 42,
-            "label": "some_int",
-            "doc": "some_int",
-            "inputBinding": {"prefix": "--some-int"}
-        },
-        "some_float": {
-            "type": "double",
-            "default": 3.14159,
-            "label": "some_float",
-            "doc": "some_float",
-            "inputBinding": {"prefix": "--some-float"}
-    },
-        "some_string": {
-            "type": "string",
-            "default": "foo",
-            "label": "some_string",
-            "doc": "some_string",
-            "inputBinding": {"prefix": "--some-string"}
-
-        },
-        "some_bool": {
-            "type": "boolean",
-            "default": False,
-            "label": "some_bool",
-            "doc": "some_bool",
-            "inputBinding": {"prefix": "--some-bool"}
-
-        },
-
-    }

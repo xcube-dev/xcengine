@@ -2,7 +2,6 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
-import builtins
 import io
 import json
 import shutil
@@ -16,7 +15,6 @@ import time
 import uuid
 from datetime import datetime
 from collections.abc import Mapping, Generator
-from typing import Any
 
 import docker
 from docker.errors import BuildError
@@ -26,63 +24,11 @@ import nbconvert
 import nbformat
 import yaml
 
+from xcengine import util
+from xcengine.parameters import NotebookParameters
+
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-
-class NotebookParameters:
-
-    def __init__(self, code: str):
-        self.vars = self.extract_variables(code)
-
-    @staticmethod
-    def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
-        _old_locals = set(locals().keys())
-        exec(code)
-        newvars = locals().keys() - _old_locals - {"_old_locals"}
-        return {k: (type(v := locals()[k]), v) for k in newvars}
-
-    def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
-        return {
-            var_name: self.get_cwl_workflow_input(var_name)
-            for var_name in self.vars
-        }
-
-    def get_cwl_commandline_inputs(self) -> dict[str, dict[str, Any]]:
-        return {
-            var_name: self.get_cwl_commandline_input(var_name)
-            for var_name in self.vars
-        }
-
-    def get_cwl_workflow_input(self, var_name: str) -> dict[str, Any]:
-        type_, default_ = self.vars[var_name]
-        return {
-            "type": self.cwl_type(type_),
-            "default": default_,
-            "doc": var_name,
-            "label": var_name,
-        }
-
-    def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
-        return self.get_cwl_workflow_input(var_name) | {
-            "inputBinding": {
-                "prefix": f"--{var_name.replace("_", "-")}"
-            }
-        }
-
-    @staticmethod
-    def cwl_type(type_: type) -> str:
-        match type_:
-            case builtins.int:
-                return "long"
-            case builtins.float:
-                return "double"
-            case builtins.str:
-                return "string"
-            case builtins.bool:
-                return "boolean"
-            case _:
-                raise ValueError(f"Unhandled type {type_}")
 
 
 class ScriptCreator:
@@ -101,7 +47,7 @@ class ScriptCreator:
     ) -> None:
         output_dir.mkdir(parents=True, exist_ok=True)
         if clear_output:
-            self.clear_directory(output_dir)
+            util.clear_directory(output_dir)
         exporter = nbconvert.PythonExporter()
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
@@ -110,6 +56,9 @@ class ScriptCreator:
             wrapper = fh.read()
         with open(output_dir / "execute.py", "w") as fh:
             fh.write(wrapper)
+        with open(output_dir / "parameters.yaml", "w") as fh:
+            print(self.nb_params.params)
+            yaml.safe_dump(self.nb_params.params, fh)
 
     def process_params_cell(self) -> None:
         params_cell_index = None
@@ -122,6 +71,9 @@ class ScriptCreator:
                 break
         if params_cell_index is not None:
             self.nb_params = NotebookParameters(
+                self.notebook.cells[params_cell_index].source
+            )
+            self.nb_params = NotebookParameters.from_code(
                 self.notebook.cells[params_cell_index].source
             )
             self.notebook.cells.insert(
@@ -166,8 +118,9 @@ class ScriptCreator:
                     "class": "CommandLineTool",
                     "id": "xce_script",
                     "requirements": {
-                        "DockerRequirement":
-                            {"dockerPull": "FIXME"}  # TODO set docker tag
+                        "DockerRequirement": {
+                            "dockerPull": "FIXME"
+                        }  # TODO set docker tag
                     },
                     "baseCommand": [
                         "python3",
@@ -180,14 +133,6 @@ class ScriptCreator:
             ],
         }
         print(yaml.safe_dump(cwl))
-
-    @staticmethod
-    def clear_directory(directory: pathlib.Path) -> None:
-        for path in directory.iterdir():
-            if path.is_dir():
-                shutil.rmtree(path)
-            else:
-                path.unlink()
 
 
 class ImageBuilder:
@@ -451,5 +396,3 @@ class PipInspector:
         ).startswith(
             "file://"
         )
-
-
