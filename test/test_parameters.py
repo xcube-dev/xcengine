@@ -131,3 +131,25 @@ some_bool:
 def test_parameters_invalid_cwl_type():
     with pytest.raises(ValueError):
         NotebookParameters({"x": (Exception, 666)}).get_cwl_workflow_inputs()
+
+
+def test_parameters_process_arguments(notebook_parameters):
+    args = [
+        "execute.py",
+        "--some-bool",
+        "True",
+        "--some-int",
+        "23",
+        "--some-string",
+        "bar",
+        "--irrelevant-argument",
+        "--some-float",
+        "2.71828",
+    ]
+    param_values = notebook_parameters.process_arguments(args)
+    assert param_values == {
+        "some_int": 23,
+        "some_float": 2.71828,
+        "some_string": "bar",
+        "some_bool": True,
+    }

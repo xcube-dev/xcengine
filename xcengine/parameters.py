@@ -63,6 +63,14 @@ class NotebookParameters:
             }
         )
 
+    def process_arguments(self, args: list[str]) -> dict[str, str]:
+        values = {}
+        for param_name, (type_, _) in self.params.items():
+            arg_name = "--" + param_name.replace("_", "-")
+            if arg_name in args:
+                values[param_name] = type_(args[args.index(arg_name) + 1])
+        return values
+
     @staticmethod
     def cwl_type(type_: type) -> str:
         match type_:
