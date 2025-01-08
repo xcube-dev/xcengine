@@ -52,13 +52,12 @@ class ScriptCreator:
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
             fh.write(body)
-        with open(pathlib.Path(__file__).parent / "wrapper.py", "r") as fh:
-            wrapper = fh.read()
-        with open(output_dir / "execute.py", "w") as fh:
-            fh.write(wrapper)
+        shutil.copy2(
+            pathlib.Path(__file__).parent / "wrapper.py",
+            output_dir / "execute.py"
+        )
         with open(output_dir / "parameters.yaml", "w") as fh:
-            print(self.nb_params.params)
-            yaml.safe_dump(self.nb_params.params, fh)
+            fh.write(self.nb_params.to_yaml())
 
     def process_params_cell(self) -> None:
         params_cell_index = None
@@ -91,7 +90,7 @@ class ScriptCreator:
     def write_cwl(self):
         # TODO flesh out this skeleton
         cwl = {
-            "cwlVersion": "v1.0",
+            "cwlVersion": "v1.2",
             "$namespaces": {"s": "https://schema.org/"},
             "s:softwareVersion": "1.0.0",
             "schemas": [

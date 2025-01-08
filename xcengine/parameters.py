@@ -73,14 +73,13 @@ class NotebookParameters:
 
     @staticmethod
     def cwl_type(type_: type) -> str:
-        match type_:
-            case builtins.int:
-                return "long"
-            case builtins.float:
-                return "double"
-            case builtins.str:
-                return "string"
-            case builtins.bool:
-                return "boolean"
-            case _:
-                raise ValueError(f"Unhandled type {type_}")
+        try:
+            # noinspection PyTypeChecker
+            return {
+                int: "long",
+                float: "double",
+                str: "string",
+                bool: "boolean",
+            }[type_]
+        except KeyError:
+            raise ValueError(f"Unhandled type {type_}")

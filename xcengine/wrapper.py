@@ -24,6 +24,8 @@ def __xce_set_params():
     LOGGER.info(f"Setting configured parameters.")
     exec(code)
 
+    # TODO: read command-line parameters too
+
 
 with pathlib.Path(__file__).with_name("user_code.py").resolve().open() as fh:
     user_code = fh.read()
