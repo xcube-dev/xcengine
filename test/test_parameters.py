@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import yaml
@@ -14,6 +16,24 @@ def expected_vars():
         "some_string": (str, "foo"),
         "some_bool": (bool, False),
     }
+
+
+@pytest.fixture
+def params_yaml():
+    return """
+some_int:
+    type: int
+    default: 42
+some_float:
+    type: float
+    default: 3.14159
+some_string:
+    type: str
+    default: foo
+some_bool:
+    type: bool
+    default: false
+"""
 
 
 @pytest.fixture
@@ -106,26 +126,14 @@ def test_parameters_to_yaml(notebook_parameters):
     }
 
 
-def test_parameters_from_yaml(expected_vars):
-    assert (
-        NotebookParameters.from_yaml(
-            """
-some_int:
-    type: int
-    default: 42
-some_float:
-    type: float
-    default: 3.14159
-some_string:
-    type: str
-    default: foo
-some_bool:
-    type: bool
-    default: false
-"""
-        ).params
-        == expected_vars
-    )
+def test_parameters_from_yaml(expected_vars, params_yaml):
+    assert NotebookParameters.from_yaml(params_yaml).params == expected_vars
+
+
+def test_parameters_from_file(tmp_path, expected_vars, params_yaml):
+    path = tmp_path / "params.yaml"
+    path.write_text(params_yaml)
+    assert NotebookParameters.from_yaml_file(path).params == expected_vars
 
 
 def test_parameters_invalid_cwl_type():
@@ -133,23 +141,74 @@ def test_parameters_invalid_cwl_type():
         NotebookParameters({"x": (Exception, 666)}).get_cwl_workflow_inputs()
 
 
-def test_parameters_process_arguments(notebook_parameters):
-    args = [
-        "execute.py",
-        "--some-bool",
-        "True",
-        "--some-int",
-        "23",
-        "--some-string",
-        "bar",
-        "--irrelevant-argument",
-        "--some-float",
-        "2.71828",
-    ]
-    param_values = notebook_parameters.process_arguments(args)
-    assert param_values == {
+def test_parameters_read_cli_arguments(notebook_parameters):
+    assert notebook_parameters.read_params_from_cli(
+        [
+            "execute.py",
+            "--some-int",
+            "23",
+            "--some-string",
+            "bar",
+            "--irrelevant-argument",
+            "--some-float",
+            "2.71828",
+            "--some-bool",
+        ]
+    ) == {
         "some_int": 23,
         "some_float": 2.71828,
         "some_string": "bar",
         "some_bool": True,
+    }
+    assert notebook_parameters.read_params_from_cli([]) == {}
+
+
+def test_parameters_read_env_arguments(notebook_parameters):
+    prefix = "xce_"
+    os.environ.update(
+        {
+            prefix + k: v
+            for k, v in {
+                "some_int": "42",
+                "some_float": "3.14159",
+                "some_string": "foo",
+                "some_bool": "False",
+            }.items()
+        }
+    )
+    assert notebook_parameters.read_params_from_env() == {
+        "some_int": 42,
+        "some_float": 3.14159,
+        "some_string": "foo",
+        "some_bool": False,
+    }
+
+
+def test_parameters_read_params_combined(notebook_parameters):
+    prefix = "xce_"
+    os.environ.update(
+        {
+            prefix + k: v
+            for k, v in {
+                "some_int": "42",
+                "some_float": "3.14159",
+                "some_string": "foo",
+                "some_bool": "False",
+            }.items()
+        }
+    )
+    assert notebook_parameters.read_params_combined(
+        [
+            "execute.py",
+            "--some-string",
+            "bar",
+            "--irrelevant-argument",
+            "--some-float",
+            "2.71828",
+        ]
+    ) == {
+        "some_int": 42,
+        "some_float": 2.71828,
+        "some_string": "bar",
+        "some_bool": False,
     }

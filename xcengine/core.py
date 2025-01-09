@@ -54,7 +54,11 @@ class ScriptCreator:
             fh.write(body)
         shutil.copy2(
             pathlib.Path(__file__).parent / "wrapper.py",
-            output_dir / "execute.py"
+            output_dir / "execute.py",
+        )
+        shutil.copy2(
+            pathlib.Path(__file__).parent / "parameters.py",
+            output_dir / "parameters.py",
         )
         with open(output_dir / "parameters.yaml", "w") as fh:
             fh.write(self.nb_params.to_yaml())
@@ -229,6 +233,8 @@ class ImageBuilder:
         micromamba clean --all --yes
         COPY user_code.py user_code.py
         COPY execute.py execute.py
+        COPY parameters.yaml parameters.yaml
+        COPY parameters.py parameters.py
         CMD python execute.py
         """
         )

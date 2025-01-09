@@ -7,24 +7,17 @@
 
 import logging
 import pathlib
+import parameters
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
 def __xce_set_params():
-    import os
-
-    code = ""
-    for key, value in os.environ.items():
-        if key.startswith("xce_"):
-            varname = key[4:]
-            code += f"global {varname}\n{varname} = {value}\n"
-            LOGGER.info(f"Configuring parameter: {varname} = {value}")
-    LOGGER.info(f"Setting configured parameters.")
-    exec(code)
-
-    # TODO: read command-line parameters too
+    params = parameters.NotebookParameters.from_yaml_file(
+        pathlib.Path(sys.argv[0]).parent / "parameters.yaml"
+    )
+    globals().update(params.read_params_combined(sys.argv))
 
 
 with pathlib.Path(__file__).with_name("user_code.py").resolve().open() as fh:
@@ -45,11 +38,13 @@ import xcube.core.new
 
 def main():
     parser = argparse.ArgumentParser()
+
+    # TODO: decide how to distinguish xcengine args from user code args
     parser.add_argument("--batch", action="store_true")
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--from-saved", action="store_true")
     parser.add_argument("-v", "--verbose", action="count", default=0)
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     if args.verbose > 0:
         LOGGER.setLevel(logging.DEBUG)
 

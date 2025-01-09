@@ -1,4 +1,6 @@
 import builtins
+import os
+import typing
 from typing import Any
 
 import yaml
@@ -16,11 +18,16 @@ class NotebookParameters:
         return cls(cls.extract_variables(code))
 
     @classmethod
-    def from_yaml(cls, yaml_string: str) -> "NotebookParameters":
-        input_data = yaml.safe_load(yaml_string)
+    def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
+        input_data = yaml.safe_load(yaml_content)
         return cls(
             {k: (eval(v["type"]), v["default"]) for k, v in input_data.items()}
         )
+
+    @classmethod
+    def from_yaml_file(cls, path: str | os.PathLike) -> "NotebookParameters":
+        with open(path, "r") as fh:
+            return cls.from_yaml(fh)
 
     @staticmethod
     def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
@@ -63,12 +70,35 @@ class NotebookParameters:
             }
         )
 
-    def process_arguments(self, args: list[str]) -> dict[str, str]:
+    def read_params_combined(
+        self, cli_args: list[str] | None
+    ) -> dict[str, str]:
+        params = self.read_params_from_env()
+        if cli_args:
+            params.update(self.read_params_from_cli(cli_args))
+        return params
+
+    def read_params_from_env(self) -> dict[str, str]:
+        values = {}
+        for param_name, (type_, _) in self.params.items():
+            env_var_name = "xce_" + param_name
+            if env_var_name in os.environ:
+                val = os.environ[env_var_name]
+                values[param_name] = (
+                    val.lower() not in {"false", "0", ""}
+                    if type_ is bool
+                    else type_(val)
+                )
+        return values
+
+    def read_params_from_cli(self, args: list[str]) -> dict[str, str]:
         values = {}
         for param_name, (type_, _) in self.params.items():
             arg_name = "--" + param_name.replace("_", "-")
             if arg_name in args:
-                values[param_name] = type_(args[args.index(arg_name) + 1])
+                values[param_name] = type_ is bool or type_(
+                    args[args.index(arg_name) + 1]
+                )
         return values
 
     @staticmethod
