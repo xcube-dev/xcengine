@@ -37,14 +37,10 @@ Convert a Jupyter notebook to a non-interactive Python script.
 
 ## `xcetool image build`
 
-Convert a Jupyter notebook to a Docker container image.
+Convert a Jupyter notebook to a Docker container image. This subcommand can
+additionally produce a Common Workflow Language (CWL) file defining an OGC
+[Earth Observation Application Package](https://docs.ogc.org/bp/20-089r1.html) which uses the container image.
 
 ## `xcetool image run`
 
 Run a Docker container using an image converted from a Jupyter notebook.
-
-## `xcetool eoap`
-
-Convert a Jupyter notebook to a Common Workflow Language (CWL) file defining
-an OGC [Earth Observation Application
-Package](https://docs.ogc.org/bp/20-089r1.html)
