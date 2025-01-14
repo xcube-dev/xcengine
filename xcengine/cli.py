@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 
 import click
+import yaml
 
 from .core import ScriptCreator, ImageBuilder, ContainerRunner
 
@@ -138,6 +139,14 @@ def image_cli():
     help="Tag to apply to the Docker image. "
     "If not specified, a timestamp-based tag will be generated automatically",
 )
+@click.option(
+    "-a",
+    "--eoap",
+    type=click.Path(path_type=pathlib.Path, writable=True),
+    default=None,
+    help="Write a CWL file defining an Earth Observation Application Package "
+    "to the specified path",
+)
 @notebook_argument
 def build(
     batch: bool,
@@ -149,6 +158,7 @@ def build(
     output: pathlib.Path,
     environment: pathlib.Path,
     tag: str,
+    eoap: pathlib.Path
 ) -> None:
     init_args = dict(
         notebook=notebook, output_dir=output, environment=environment, tag=tag
@@ -166,6 +176,8 @@ def build(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
             image_builder.build(**build_args)
+    if eoap:
+        eoap.write_text(yaml.dump(image_builder.create_cwl()))
 
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
@@ -187,13 +199,6 @@ def run(
     runner.run(
         run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
     )
-
-
-@cli.command(help="Create an Earth Observation Application Package")
-@notebook_argument
-def eoap(notebook: pathlib.Path) -> None:
-    script_creator = ScriptCreator(notebook)
-    script_creator.write_cwl()
 
 
 if __name__ == "__main__":

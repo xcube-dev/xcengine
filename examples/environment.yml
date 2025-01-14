@@ -1,0 +1,7 @@
+name: xce-example-1
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.10
+  - xcube >=1.7.1
+  - matplotlib-base

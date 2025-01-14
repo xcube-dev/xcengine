@@ -15,6 +15,7 @@ import time
 import uuid
 from datetime import datetime
 from collections.abc import Mapping, Generator
+from typing import Any
 
 import docker
 from docker.errors import BuildError
@@ -91,9 +92,8 @@ class ScriptCreator:
                 },
             )
 
-    def write_cwl(self):
-        # TODO flesh out this skeleton
-        cwl = {
+    def create_cwl(self, image_tag: str) -> dict[str, Any]:
+        return {
             "cwlVersion": "v1.2",
             "$namespaces": {"s": "https://schema.org/"},
             "s:softwareVersion": "1.0.0",
@@ -122,20 +122,20 @@ class ScriptCreator:
                     "id": "xce_script",
                     "requirements": {
                         "DockerRequirement": {
-                            "dockerPull": "FIXME"
-                        }  # TODO set docker tag
+                            "dockerPull": image_tag
+                        }
                     },
                     "baseCommand": [
                         "python3",
-                        "execute.py",
+                        "/home/mambauser/execute.py",
                     ],
-                    "arguments": [],
+                    "arguments": ["--batch"],
+                    # TODO: Handle stage-in and stage-out properly
                     "inputs": self.nb_params.get_cwl_commandline_inputs(),
                     "outputs": {},
                 },
             ],
         }
-        print(yaml.safe_dump(cwl))
 
 
 class ImageBuilder:
@@ -151,13 +151,21 @@ class ImageBuilder:
         output_dir: pathlib.Path,
         environment: pathlib.Path,
         build_dir: pathlib.Path,
-        tag: str,
+        tag: str | None,
     ):
         self.notebook = notebook
         self.output_dir = output_dir
         self.environment = environment
         self.build_dir = build_dir
-        self.tag = tag
+        if tag is None:
+            self.tag = \
+                f"xcengine:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}"
+            LOGGER.info(
+                f"No tag specified; using {self.tag}"
+            )
+        else:
+            self.tag = tag
+        self.script_creator = ScriptCreator(self.notebook)
 
     def build(
         self,
@@ -166,8 +174,7 @@ class ImageBuilder:
         from_saved: bool,
         keep: bool,
     ) -> None:
-        script_creator = ScriptCreator(self.notebook)
-        script_creator.convert_notebook_to_script(self.build_dir)
+        self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
             shutil.copy2(self.environment, self.build_dir / "environment.yml")
         else:
@@ -231,6 +238,7 @@ class ImageBuilder:
         COPY environment.yml environment.yml
         RUN micromamba install -y -n base -f environment.yml && \
         micromamba clean --all --yes
+        WORKDIR /home/mambauser
         COPY user_code.py user_code.py
         COPY execute.py execute.py
         COPY parameters.yaml parameters.yaml
@@ -240,16 +248,11 @@ class ImageBuilder:
         )
         with open(self.build_dir / "Dockerfile", "w") as fh:
             fh.write(dockerfile)
-        if self.tag:
-            tag = self.tag
-            LOGGER.info(f"Building image with specified tag {tag}...")
-        else:
-            tag = f"xcengine:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}"
-            LOGGER.info(f"Building image with default tag {tag}...")
+        LOGGER.info(f"Building image with tag {self.tag}...")
         try:
             image, logs = client.images.build(
                 path=str(self.build_dir),
-                tag=tag,
+                tag=self.tag,
             )
         except BuildError as error:
             LOGGER.error(error.msg)
@@ -258,6 +261,9 @@ class ImageBuilder:
             sys.exit(1)
         LOGGER.info("Docker image built.")
         return image
+
+    def create_cwl(self):
+        return self.script_creator.create_cwl(self.tag)
 
 
 class ContainerRunner:
@@ -333,6 +339,7 @@ class ContainerRunner:
         return member_2
 
     def extract_output_from_container(self, container: Container) -> None:
+        # TODO: update this to copy from CWD (EOAP-compliant)
         bits, stat = container.get_archive("/home/mambauser/output")
         reader = io.BufferedReader(ChunkStream(bits))
         with tarfile.open(name=None, mode="r|", fileobj=reader) as tar_fh:

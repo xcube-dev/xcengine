@@ -7,6 +7,8 @@
 
 import logging
 import pathlib
+import sys
+
 import parameters
 
 LOGGER = logging.getLogger(__name__)
@@ -58,14 +60,17 @@ def main():
     saved_datasets = {}
 
     if args.batch:
+        # TODO: Implement EOAP-compliant stage-in and stage-out
         parent_path = pathlib.Path(sys.argv[0]).parent
-        output_path = pathlib.Path.home() / "output"
+        # output_path = pathlib.Path.home() / "output"
+        output_path = pathlib.Path.cwd()
         output_path.mkdir(parents=True, exist_ok=True)
         for name, dataset in datasets.items():
             dataset_path = output_path / (name + ".zarr")
             saved_datasets[name] = dataset_path
             dataset.to_zarr(dataset_path)
-        (parent_path / "finished").touch()
+        # (parent_path / "finished").touch()
+        (output_path / "finished").touch()
 
     if args.server:
         xcube.util.plugin.init_plugins()
