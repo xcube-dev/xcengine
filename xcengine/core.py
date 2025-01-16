@@ -339,7 +339,8 @@ class ContainerRunner:
         return member_2
 
     def extract_output_from_container(self, container: Container) -> None:
-        # TODO: update this to copy from CWD (EOAP-compliant)
+        # This assumes the image-defined CWD, so it won't work in EOAP mode,
+        # but EOAP has its own protocol for data stage-in/out anyway.
         bits, stat = container.get_archive("/home/mambauser/output")
         reader = io.BufferedReader(ChunkStream(bits))
         with tarfile.open(name=None, mode="r|", fileobj=reader) as tar_fh:

@@ -41,7 +41,8 @@ output_option = click.option(
     "-o",
     "--output",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Write output data to this directory.",
+    help="Write output data to this directory, which will be created if it "
+    "does not exist already.",
 )
 
 from_saved_option = click.option(
