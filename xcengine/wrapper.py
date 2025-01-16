@@ -10,6 +10,7 @@ import pathlib
 import sys
 
 import parameters
+import util
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +74,7 @@ def main():
         # The "finished" file is a flag to indicate to a runner when
         # processing is complete, though the xcetool runner doesn't yet use it.
         (output_path / "finished").touch()
+        util.write_stac(datasets, output_path)
 
     if args.server:
         xcube.util.plugin.init_plugins()

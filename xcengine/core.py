@@ -14,7 +14,7 @@ import textwrap
 import time
 import uuid
 from datetime import datetime
-from collections.abc import Mapping, Generator
+from collections.abc import Mapping, Generator, Iterable
 from typing import Any
 
 import docker
@@ -53,14 +53,10 @@ class ScriptCreator:
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
             fh.write(body)
-        shutil.copy2(
-            pathlib.Path(__file__).parent / "wrapper.py",
-            output_dir / "execute.py",
-        )
-        shutil.copy2(
-            pathlib.Path(__file__).parent / "parameters.py",
-            output_dir / "parameters.py",
-        )
+        parent_dir = pathlib.Path(__file__).parent
+        shutil.copy2(parent_dir / "wrapper.py", output_dir / "execute.py")
+        for filename in "parameters.py", "util.py":
+            shutil.copy2(parent_dir / filename, output_dir / filename)
         with open(output_dir / "parameters.yaml", "w") as fh:
             fh.write(self.nb_params.to_yaml())
 
@@ -186,19 +182,28 @@ class ImageBuilder:
     ) -> None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
+            with open(self.environment, "r") as fh:
+                env_def = yaml.safe_load(fh)
+
+
             shutil.copy2(self.environment, self.build_dir / "environment.yml")
         else:
             LOGGER.warning(
                 f"No environment file given; "
                 f"trying to reproduce current environment in Docker image"
             )
-            self.export_conda_env()
+            env_def = self.export_conda_env()
+        # We need xcube for server/viewer and pystac for EOAP stage-in/out
+        self.add_packages_to_environment(env_def, ["xcube", "pystac"])
+        with open(self.build_dir / "environment.yml", "w") as fh:
+            fh.write(yaml.safe_dump(env_def))
         image: Image = self.build_image()
         if run_batch or run_server:
             runner = ContainerRunner(image, self.output_dir)
             runner.run(run_batch, run_server, from_saved, keep)
 
-    def export_conda_env(self) -> None:
+    @staticmethod
+    def export_conda_env() -> dict:
         conda_process = subprocess.run(
             ["conda", "env", "export"], capture_output=True
         )
@@ -232,13 +237,21 @@ class ImageBuilder:
                 del deps[pip_index]
             else:
                 pip_map["pip"] = nonlocals
-        if not any(
-            map(lambda d: isinstance(d, str) and d.startswith("xcube="), deps)
-        ):
-            # We need xcube for the server and viewer functionality
-            deps.append("xcube")
-        with open(self.build_dir / "environment.yml", "w") as fh:
-            fh.write(yaml.safe_dump(env_def))
+
+    @staticmethod
+    def add_packages_to_environment(conda_env: dict, packages: Iterable[str]) -> dict:
+        deps: list = conda_env["dependencies"]
+        def ensure_present(pkg: str):
+            if not any(
+                map(
+                    lambda d: isinstance(d, str) and d.startswith(f"{pkg}="),
+                    deps,
+                )
+            ):
+                deps.append(pkg)
+        for package in packages:
+            ensure_present(package)
+        return conda_env
 
     def build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
@@ -253,6 +266,7 @@ class ImageBuilder:
         COPY execute.py execute.py
         COPY parameters.yaml parameters.yaml
         COPY parameters.py parameters.py
+        COPY util.py util.py
         CMD python execute.py
         """
         )
