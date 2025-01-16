@@ -93,6 +93,8 @@ class ScriptCreator:
             )
 
     def create_cwl(self, image_tag: str) -> dict[str, Any]:
+        script_id = "xce_script"
+        output_id = "xce_output"
         return {
             "cwlVersion": "v1.2",
             "$namespaces": {"s": "https://schema.org/"},
@@ -108,22 +110,26 @@ class ScriptCreator:
                     "id": "main",
                     "requirements": [],
                     "inputs": self.nb_params.get_cwl_workflow_inputs(),
-                    "outputs": [],
+                    "outputs": [
+                        {
+                            "id": "stac_catalog",
+                            "outputSource": [f"run_script/{output_id}"],
+                            "type": "Directory",
+                        }
+                    ],
                     "steps": {
                         "run_script": {
-                            "run": "#xce_script",
-                            "in": {},
-                            "out": [],
+                            "run": f"#{script_id}",
+                            "in": {},  # TODO add input mapping
+                            "out": [output_id],
                         }
                     },
                 },
                 {
                     "class": "CommandLineTool",
-                    "id": "xce_script",
+                    "id": script_id,
                     "requirements": {
-                        "DockerRequirement": {
-                            "dockerPull": image_tag
-                        }
+                        "DockerRequirement": {"dockerPull": image_tag}
                     },
                     "baseCommand": [
                         "python3",
@@ -132,7 +138,12 @@ class ScriptCreator:
                     "arguments": ["--batch"],
                     # TODO: Handle stage-in and stage-out properly
                     "inputs": self.nb_params.get_cwl_commandline_inputs(),
-                    "outputs": {},
+                    "outputs": {
+                        output_id: {
+                            "outputBinding": {"glob": "."},
+                            "type": "Directory",
+                        }
+                    },
                 },
             ],
         }
@@ -158,11 +169,10 @@ class ImageBuilder:
         self.environment = environment
         self.build_dir = build_dir
         if tag is None:
-            self.tag = \
+            self.tag = (
                 f"xcengine:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}"
-            LOGGER.info(
-                f"No tag specified; using {self.tag}"
             )
+            LOGGER.info(f"No tag specified; using {self.tag}")
         else:
             self.tag = tag
         self.script_creator = ScriptCreator(self.notebook)

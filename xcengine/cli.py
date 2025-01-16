@@ -159,7 +159,7 @@ def build(
     output: pathlib.Path,
     environment: pathlib.Path,
     tag: str,
-    eoap: pathlib.Path
+    eoap: pathlib.Path,
 ) -> None:
     init_args = dict(
         notebook=notebook, output_dir=output, environment=environment, tag=tag

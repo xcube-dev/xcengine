@@ -27,7 +27,6 @@ with pathlib.Path(__file__).with_name("user_code.py").resolve().open() as fh:
 
 exec(user_code)
 
-import sys
 import argparse
 import pathlib
 
@@ -61,7 +60,6 @@ def main():
 
     if args.batch:
         # TODO: Implement EOAP-compliant stage-in and stage-out
-        parent_path = pathlib.Path(sys.argv[0]).parent
         # EOAP doesn't require an "output" subdirectory (output can go anywhere
         # in the CWD) but it's used by xcetool's built-in runner.
         # Note that EOAP runners typically override the image-specified CWD.
