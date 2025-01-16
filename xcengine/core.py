@@ -120,7 +120,7 @@ class ScriptCreator:
                     "steps": {
                         "run_script": {
                             "run": f"#{script_id}",
-                            "in": {},  # TODO add input mapping
+                            "in": self.nb_params.get_cwl_step_inputs(),
                             "out": [output_id],
                         }
                     },

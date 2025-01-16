@@ -74,6 +74,15 @@ def test_parameters_get_commandline_inputs(notebook_parameters):
     }
 
 
+def test_parameters_get_cwl_step_inputs(notebook_parameters):
+    assert notebook_parameters.get_cwl_step_inputs() == {
+        "some_int": "some_int",
+        "some_float": "some_float",
+        "some_string": "some_string",
+        "some_bool": "some_bool",
+    }
+
+
 def test_parameters_from_code(expected_vars):
     assert (
         xcengine.parameters.NotebookParameters.from_code(

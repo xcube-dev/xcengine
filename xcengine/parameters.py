@@ -42,6 +42,9 @@ class NotebookParameters:
             for var_name in self.params
         }
 
+    def get_cwl_step_inputs(self) -> dict[str, str]:
+        return {var_name: var_name for var_name in self.params}
+
     def get_cwl_commandline_inputs(self) -> dict[str, dict[str, Any]]:
         return {
             var_name: self.get_cwl_commandline_input(var_name)
