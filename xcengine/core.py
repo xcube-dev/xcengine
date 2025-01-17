@@ -70,9 +70,6 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
-            self.nb_params = NotebookParameters(
-                self.notebook.cells[params_cell_index].source
-            )
             self.nb_params = NotebookParameters.from_code(
                 self.notebook.cells[params_cell_index].source
             )

@@ -15,6 +15,8 @@ class NotebookParameters:
 
     @classmethod
     def from_code(cls, code: str) -> "NotebookParameters":
+        # TODO run whole notebook up to params cell, not just the params cell!
+        # (Because it might use imports etc. from earlier in the notebook.)
         return cls(cls.extract_variables(code))
 
     @classmethod
@@ -29,12 +31,19 @@ class NotebookParameters:
         with open(path, "r") as fh:
             return cls.from_yaml(fh)
 
-    @staticmethod
-    def extract_variables(code: str) -> dict[str, tuple[type, Any]]:
+    @classmethod
+    def extract_variables(cls, code: str) -> dict[str, tuple[type, Any]]:
         _old_locals = set(locals().keys())
         exec(code)
         newvars = locals().keys() - _old_locals - {"_old_locals"}
-        return {k: (type(v := locals()[k]), v) for k in newvars}
+        return {k: cls.make_param_tuple(locals()[k]) for k in newvars}
+
+    @staticmethod
+    def make_param_tuple(value: Any) -> tuple[type, Any]:
+        return (
+            t := type(value),
+            value if t in {int, float, str, bool} else None
+        )
 
     def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
         return {
