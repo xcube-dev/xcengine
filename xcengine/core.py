@@ -181,9 +181,6 @@ class ImageBuilder:
         if self.environment:
             with open(self.environment, "r") as fh:
                 env_def = yaml.safe_load(fh)
-
-
-            shutil.copy2(self.environment, self.build_dir / "environment.yml")
         else:
             LOGGER.warning(
                 f"No environment file given; "
@@ -234,9 +231,12 @@ class ImageBuilder:
                 del deps[pip_index]
             else:
                 pip_map["pip"] = nonlocals
+        return env_def
 
     @staticmethod
-    def add_packages_to_environment(conda_env: dict, packages: Iterable[str]) -> dict:
+    def add_packages_to_environment(
+        conda_env: dict, packages: Iterable[str]
+    ) -> dict:
         deps: list = conda_env["dependencies"]
         def ensure_present(pkg: str):
             if not any(

@@ -33,22 +33,25 @@ def write_stac(
             href=asset_path,
             media_type="image/tiff; application=geotiff;",
         )
-        bb = namedtuple('Bounds', ['left', 'bottom', "right", "top"])(0, -90, 360, 90)  # TODO fixme
+        bb = namedtuple("Bounds", ["left", "bottom", "right", "top"])(
+            0, -90, 360, 90
+        )  # TODO determine and set actual bounds here
         item = pystac.Item(
             id=ds_name,
             geometry={
                 "type": "Polygon",
-            "coordinates": [
-                [bb.left, bb.bottom],
-                [bb.left, bb.top],
-                [bb.right, bb.top],
-                [bb.right, bb.bottom],
-                [bb.left, bb.bottom],
-            ]},
+                "coordinates": [
+                    [bb.left, bb.bottom],
+                    [bb.left, bb.top],
+                    [bb.right, bb.top],
+                    [bb.right, bb.bottom],
+                    [bb.left, bb.bottom],
+                ],
+            },
             bbox=[bb.left, bb.bottom, bb.right, bb.top],
             datetime=None,
-            start_datetime=datetime(2000, 1, 1),  # TODO fixme
-            end_datetime=datetime(2001, 1, 1),  # TODO fixme
+            start_datetime=datetime(2000, 1, 1),  # TODO set actual start
+            end_datetime=datetime(2001, 1, 1),  # TODO set actual end
             properties={},  # datetime values will be filled in automatically
             assets={"zarr": asset},
         )
