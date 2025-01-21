@@ -140,12 +140,12 @@ class NotebookParameters:
                 )
         if "product" in self.cwl_params and "--product" in args:
             self.read_datasets_from_product(
-                args[args.index("product") + 1], values
+                args[args.index("--product") + 1], values
             )
         return values
 
     def read_datasets_from_product(
-        self, stage_in: str, values: dict[str, Any]
+        self, stage_in: pathlib.Path | str, values: dict[str, Any]
     ) -> None:
         stage_in_path = pathlib.Path(stage_in)
         catalog_path = stage_in_path / "catalog.json"
@@ -183,15 +183,16 @@ class NotebookParameters:
         param_name: str,
     ) -> xr.Dataset:
         item_links = [link for link in catalog.links if link.rel == "item"]
-        item = next(filter(
-            lambda i: i.id == param_name,
-            (pystac.Item.from_file(stage_in_path / link.href)
-            for link in item_links)
-        ))
-        asset = next(
-            a for a in item.assets.values()
-            if "data" in a.roles
+        item = next(
+            filter(
+                lambda i: i.id == param_name,
+                (
+                    pystac.Item.from_file(stage_in_path / link.href)
+                    for link in item_links
+                ),
+            )
         )
+        asset = next(a for a in item.assets.values() if "data" in a.roles)
         return xr.open_dataset(stage_in_path / asset.href)
 
     @staticmethod

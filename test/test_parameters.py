@@ -45,7 +45,7 @@ def dataset():
         data_vars=dict(
             v=(
                 ["time", "lat", "lon"],
-                [[[0, 0], [0, 0]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]],
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]], [[9, 0], [1, 2]]],
             ),
         ),
         coords=dict(
@@ -60,6 +60,61 @@ def dataset():
 @pytest.fixture
 def notebook_parameters(expected_vars):
     return xcengine.parameters.NotebookParameters(expected_vars)
+
+
+@pytest.fixture
+def stac_catalog():
+    return {
+        "description": "Root catalog",
+        "id": "catalog",
+        "links": [
+            {
+                "href": "item.json",
+                "rel": "item",
+                "type": "application/geo+json",
+            }
+        ],
+        "stac_version": "1.0.0",
+        "type": "Catalog",
+    }
+
+
+@pytest.fixture
+def stac_item():
+    return {
+        "stac_version": "1.0.0",
+        "stac_extensions": [],
+        "type": "Feature",
+        "id": "ds1",
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [170, -45],
+                    [170, -46],
+                    [171, -46],
+                    [171, -45],
+                    [170, -45],
+                ]
+            ],
+        },
+        "properties": {
+            "datetime": "2020-01-01T00:00:00.000000Z",
+            "start_datetime": "2020-01-01T00:00:00.000000Z",
+            "end_datetime": "2020-01-03T00:00:00.000000Z",
+            "title": "dataset",
+        },
+        "bbox": [170, -46, 171, -45],
+        "assets": {
+            "asset1": {
+                "type": "application/netcdf",
+                "roles": ["data"],
+                "title": "Asset 1",
+                "href": "ds1.nc",
+            }
+        },
+        "links": [],
+    }
 
 
 def test_parameters_get_commandline_inputs(notebook_parameters):
@@ -206,6 +261,24 @@ def test_parameters_read_cli_arguments(notebook_parameters):
     assert notebook_parameters.read_params_from_cli([]) == {}
 
 
+def test_parameters_read_cli_arguments_with_product(
+    tmp_path, dataset, stac_catalog, stac_item
+):
+    dataset.to_netcdf(tmp_path / "ds1.nc")
+    (tmp_path / "catalog.json").write_text(json.dumps(stac_catalog))
+    (tmp_path / "item.json").write_text(json.dumps(stac_item))
+
+    params = NotebookParameters(
+        {"some_int": (int, 42), "ds1": (xr.Dataset, None)}
+    )
+    param_values = params.read_params_from_cli(
+        ["execute.py", "--some-int", "23", "--product", str(tmp_path)]
+    )
+    assert len(param_values) == 2
+    assert param_values["some_int"] == 23
+    assert (dataset.v == param_values["ds1"].v).all()
+
+
 def test_parameters_read_env_arguments(notebook_parameters):
     prefix = "xce_"
     os.environ.update(
@@ -257,65 +330,35 @@ def test_parameters_read_params_combined(notebook_parameters):
     }
 
 
-def test_read_datasets_from_product(tmp_path, dataset):
+def test_read_datasets_from_product(
+    tmp_path, dataset, stac_catalog, stac_item
+):
     dataset.to_netcdf(tmp_path / "ds1.nc")
-    (tmp_path / "catalog.json").write_text(
-        json.dumps(
-            {
-                "description": "Root catalog",
-                "id": "catalog",
-                "links": [
-                    {
-                        "href": "item.json",
-                        "rel": "item",
-                        "type": "application/geo+json",
-                    }
-                ],
-                "stac_version": "1.0.0",
-                "type": "Catalog",
-            }
-        )
-    )
-    (tmp_path / "item.json").write_text(
-        json.dumps(
-            {
-                "stac_version": "1.0.0",
-                "stac_extensions": [],
-                "type": "Feature",
-                "id": "ds1",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [
-                        [
-                            [170, -45],
-                            [170, -46],
-                            [171, -46],
-                            [171, -45],
-                            [170, -45],
-                        ]
-                    ],
-                },
-                "properties": {
-                    "datetime": "2024-11-13T17:06:07.293807Z",
-                    "start_datetime": "2024-11-13T17:06:07.293807Z",
-                    "end_datetime": "2024-11-13T17:06:32.292309Z",
-                    "title": "dataset",
-                },
-                "bbox": [170, -46, 171, -45],
-                "assets": {
-                    "asset1": {
-                        "type": "image/x.geotiff",
-                        "roles": ["data"],
-                        "title": "Asset 1",
-                        "href": "ds1.nc",
-                    }
-                },
-                "links": [],
-            }
-        )
-    )
+    (tmp_path / "catalog.json").write_text(json.dumps(stac_catalog))
+    (tmp_path / "item.json").write_text(json.dumps(stac_item))
 
     params = NotebookParameters({"ds1": (xr.Dataset, None)})
     values = {}
     params.read_datasets_from_product(tmp_path, values)
-    assert((dataset.v == values["ds1"].v).all())
+    assert (dataset.v == values["ds1"].v).all()
+
+
+def test_read_datasets_from_product_no_catalog(tmp_path):
+    params = NotebookParameters({"ds1": (xr.Dataset, None)})
+    with pytest.raises(RuntimeError) as error:
+        params.read_datasets_from_product(tmp_path, {})
+    assert "catalog.json" in str(error)
+
+
+def test_read_datasets_from_product_missing_items(
+    tmp_path, stac_catalog, stac_item
+):
+    (tmp_path / "catalog.json").write_text(json.dumps(stac_catalog))
+    (tmp_path / "item.json").write_text(json.dumps(stac_item))
+    params = NotebookParameters(
+        {"foo": (xr.Dataset, None), "bar": (xr.Dataset, None)}
+    )
+    with pytest.raises(RuntimeError) as error:
+        params.read_datasets_from_product(tmp_path, {})
+    for substring in "missing", "foo", "bar":
+        assert substring in str(error)
