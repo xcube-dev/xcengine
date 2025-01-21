@@ -1,7 +1,10 @@
+import json
 import os
 
 import pytest
 
+import pandas as pd
+import xarray as xr
 import yaml
 
 import xcengine.parameters
@@ -34,6 +37,24 @@ some_bool:
     type: bool
     default: false
 """
+
+
+@pytest.fixture
+def dataset():
+    return xr.Dataset(
+        data_vars=dict(
+            v=(
+                ["time", "lat", "lon"],
+                [[[0, 0], [0, 0]], [[0, 0], [0, 0]], [[0, 0], [0, 0]]],
+            ),
+        ),
+        coords=dict(
+            lon=[10, 20],
+            lat=[40, 50],
+            time=["2020-01-01", "2020-01-02", "2020-01-03"],
+        ),
+        attrs=dict(title="example dataset"),
+    )
 
 
 @pytest.fixture
@@ -139,6 +160,19 @@ def test_parameters_from_yaml(expected_vars, params_yaml):
     assert NotebookParameters.from_yaml(params_yaml).params == expected_vars
 
 
+def test_parameters_from_yaml_with_dataset():
+    import xarray as xr
+
+    yaml_ = """
+some_ds:
+    type: Dataset
+    default: null
+"""
+    assert NotebookParameters.from_yaml(yaml_).params == {
+        "some_ds": (xr.Dataset, None)
+    }
+
+
 def test_parameters_from_file(tmp_path, expected_vars, params_yaml):
     path = tmp_path / "params.yaml"
     path.write_text(params_yaml)
@@ -221,3 +255,67 @@ def test_parameters_read_params_combined(notebook_parameters):
         "some_string": "bar",
         "some_bool": False,
     }
+
+
+def test_read_datasets_from_product(tmp_path, dataset):
+    dataset.to_netcdf(tmp_path / "ds1.nc")
+    (tmp_path / "catalog.json").write_text(
+        json.dumps(
+            {
+                "description": "Root catalog",
+                "id": "catalog",
+                "links": [
+                    {
+                        "href": "item.json",
+                        "rel": "item",
+                        "type": "application/geo+json",
+                    }
+                ],
+                "stac_version": "1.0.0",
+                "type": "Catalog",
+            }
+        )
+    )
+    (tmp_path / "item.json").write_text(
+        json.dumps(
+            {
+                "stac_version": "1.0.0",
+                "stac_extensions": [],
+                "type": "Feature",
+                "id": "ds1",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [170, -45],
+                            [170, -46],
+                            [171, -46],
+                            [171, -45],
+                            [170, -45],
+                        ]
+                    ],
+                },
+                "properties": {
+                    "datetime": "2024-11-13T17:06:07.293807Z",
+                    "start_datetime": "2024-11-13T17:06:07.293807Z",
+                    "end_datetime": "2024-11-13T17:06:32.292309Z",
+                    "title": "dataset",
+                },
+                "bbox": [170, -46, 171, -45],
+                "assets": {
+                    "asset1": {
+                        "type": "image/x.geotiff",
+                        "roles": ["data"],
+                        "title": "Asset 1",
+                        "href": "ds1.nc",
+                    }
+                },
+                "links": [],
+            }
+        )
+    )
+
+    params = NotebookParameters({"ds1": (xr.Dataset, None)})
+    values = {}
+    params.read_datasets_from_product(tmp_path, values)
+    assert((dataset.v == values["ds1"].v).all())

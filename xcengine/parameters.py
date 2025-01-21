@@ -1,17 +1,38 @@
-import builtins
+import logging
 import os
+import pathlib
 import typing
 from typing import Any
 
+import pystac
+import xarray as xr
 import yaml
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class NotebookParameters:
 
     params: dict[str, tuple[type, Any]]
+    cwl_params: dict[str, tuple[type | str, Any]]
+    dataset_inputs: list[str]
 
     def __init__(self, params: dict[str, tuple[type, Any]]):
         self.params = params
+        self.make_cwl_params()
+
+    def make_cwl_params(self):
+        self.dataset_inputs = []
+        self.cwl_params = {}
+        for param_name in self.params:
+            type_, default = self.params[param_name]
+            if type_ is xr.Dataset:
+                self.dataset_inputs.append(param_name)
+            else:
+                self.cwl_params[param_name] = self.cwl_type(type_), default
+        if self.dataset_inputs:
+            self.cwl_params["product"] = "Directory", None
 
     @classmethod
     def from_code(cls, code: str) -> "NotebookParameters":
@@ -23,7 +44,13 @@ class NotebookParameters:
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
         input_data = yaml.safe_load(yaml_content)
         return cls(
-            {k: (eval(v["type"]), v["default"]) for k, v in input_data.items()}
+            {
+                k: (
+                    eval(v["type"], globals(), {"Dataset": xr.Dataset}),
+                    v["default"],
+                )
+                for k, v in input_data.items()
+            }
         )
 
     @classmethod
@@ -42,7 +69,7 @@ class NotebookParameters:
     def make_param_tuple(value: Any) -> tuple[type, Any]:
         return (
             t := type(value),
-            value if t in {int, float, str, bool} else None
+            value if t in {int, float, str, bool} else None,
         )
 
     def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
@@ -107,11 +134,65 @@ class NotebookParameters:
         values = {}
         for param_name, (type_, _) in self.params.items():
             arg_name = "--" + param_name.replace("_", "-")
-            if arg_name in args:
+            if arg_name in args and type_ != xr.Dataset:
                 values[param_name] = type_ is bool or type_(
                     args[args.index(arg_name) + 1]
                 )
+        if "product" in self.cwl_params and "--product" in args:
+            self.read_datasets_from_product(
+                args[args.index("product") + 1], values
+            )
         return values
+
+    def read_datasets_from_product(
+        self, stage_in: str, values: dict[str, Any]
+    ) -> None:
+        stage_in_path = pathlib.Path(stage_in)
+        catalog_path = stage_in_path / "catalog.json"
+        if not catalog_path.is_file():
+            raise RuntimeError(
+                f"Stage-in directory {stage_in_path} does not contain a "
+                f'"catalog.json" file.'
+            )
+        catalog = pystac.Catalog.from_file(catalog_path)
+        item_links = [link for link in catalog.links if link.rel == "item"]
+        expected_names = set(self.dataset_inputs)
+        provided_names = {
+            pystac.Item.from_file(stage_in_path / link.href).id
+            for link in item_links
+        }
+        if (extra := provided_names - expected_names) != set():
+            LOGGER.warning(
+                f"Unexpected item(s) in stage-in catalogue: {', '.join(extra)}"
+            )
+        if (missing := expected_names - provided_names) != set():
+            raise RuntimeError(
+                f"Expected item(s) missing in stage-in catalogue: "
+                f"{', '.join(missing)}"
+            )
+        for param_name, (type_, _) in self.params.items():
+            if type_ is xr.Dataset:
+                values[param_name] = self.read_staged_in_dataset(
+                    stage_in_path, catalog, param_name
+                )
+
+    @staticmethod
+    def read_staged_in_dataset(
+        stage_in_path: pathlib.Path,
+        catalog: pystac.Catalog,
+        param_name: str,
+    ) -> xr.Dataset:
+        item_links = [link for link in catalog.links if link.rel == "item"]
+        item = next(filter(
+            lambda i: i.id == param_name,
+            (pystac.Item.from_file(stage_in_path / link.href)
+            for link in item_links)
+        ))
+        asset = next(
+            a for a in item.assets.values()
+            if "data" in a.roles
+        )
+        return xr.open_dataset(stage_in_path / asset.href)
 
     @staticmethod
     def cwl_type(type_: type) -> str:

@@ -238,6 +238,7 @@ class ImageBuilder:
         conda_env: dict, packages: Iterable[str]
     ) -> dict:
         deps: list = conda_env["dependencies"]
+
         def ensure_present(pkg: str):
             if not any(
                 map(
@@ -246,6 +247,7 @@ class ImageBuilder:
                 )
             ):
                 deps.append(pkg)
+
         for package in packages:
             ensure_present(package)
         return conda_env
