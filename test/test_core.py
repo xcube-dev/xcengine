@@ -1,3 +1,4 @@
+import json
 import pathlib
 import pytest
 from unittest.mock import Mock
@@ -6,6 +7,8 @@ import docker.models.images
 
 import xcengine.core
 import xcengine.parameters
+
+from unittest.mock import MagicMock, patch
 
 
 def test_init_runner_invalid_image_type():
@@ -35,3 +38,37 @@ def test_init_runner_with_image():
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
     assert runner.image == image
+
+
+@patch("xcengine.core.subprocess.run")
+def test_pip(mock_run):
+    pip_output = {
+        "version": "1",
+        "pip_version": "24.3.1",
+        "installed": [
+            {"metadata": {"name": "pyfiglet"}, "installer": "pip"},
+            {
+                "metadata": {"name": "xrlint"},
+                "direct_url": {"url": "file:///home/pont/loc/repos/xrlint"},
+                "installer": "pip",
+            },
+            {"metadata": {"name": "setuptools"}},
+            {
+                "metadata": {"name": "pip"},
+                "direct_url": {
+                    "url": "file:///home/conda/feedstock_root/build_artifacts/pip_1734466185654/work"
+                },
+                "installer": "conda",
+            },
+            {"metadata": {"name": "textdistance"}, "installer": "pip"},
+        ],
+    }
+    mock = MagicMock()
+    mock.configure_mock(stdout=json.dumps(pip_output))
+    mock_run.return_value = mock
+    inspector = xcengine.core.PipInspector()
+    assert inspector.is_local("xrlint")
+    assert not inspector.is_local("pyfiglet")
+    assert not inspector.is_local("textdistance")
+    assert not inspector.is_local("pip")
+    assert not inspector.is_local("setuptools")

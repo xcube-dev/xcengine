@@ -3,12 +3,13 @@ import os
 
 import pytest
 
-import pandas as pd
 import xarray as xr
 import yaml
 
 import xcengine.parameters
 from xcengine.parameters import NotebookParameters
+
+from test_util import dataset
 
 
 @pytest.fixture
@@ -37,24 +38,6 @@ some_bool:
     type: bool
     default: false
 """
-
-
-@pytest.fixture
-def dataset():
-    return xr.Dataset(
-        data_vars=dict(
-            v=(
-                ["time", "lat", "lon"],
-                [[[1, 2], [3, 4]], [[5, 6], [7, 8]], [[9, 0], [1, 2]]],
-            ),
-        ),
-        coords=dict(
-            lon=[10, 20],
-            lat=[40, 50],
-            time=["2020-01-01", "2020-01-02", "2020-01-03"],
-        ),
-        attrs=dict(title="example dataset"),
-    )
 
 
 @pytest.fixture
