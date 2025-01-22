@@ -4,6 +4,7 @@
 
 import io
 import json
+import os
 import shutil
 import sys
 import tarfile
@@ -399,8 +400,14 @@ class PipInspector:
     """
 
     def __init__(self):
+        environment = os.environ.copy()
+        for varname in "FORCE_COLOR", "CLICOLOR", "CLICOLOR_FORCE":
+            environment.pop(varname, None)
+        environment["NO_COLOR"] = "1"
         pip_process = subprocess.run(
-            ["pip", "--no-color", "inspect"], capture_output=True
+            ["pip", "--no-color", "inspect"],
+            capture_output=True,
+            env=environment,
         )
         pip_packages = json.loads(pip_process.stdout)
         self.pkg_index: dict[str, dict] = {}
