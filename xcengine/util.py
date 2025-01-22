@@ -31,7 +31,13 @@ def write_stac(
         asset = pystac.Asset(
             roles=["data"],
             href=asset_path,
-            media_type="image/tiff; application=geotiff;",
+            # No official media type for Zarr yet, but "application/vnd.zarr"
+            # https://github.com/radiantearth/stac-spec/issues/713 and listed in
+            # https://humanbrainproject.github.io/openMINDS/v3/core/v4/data/contentType.html
+            # https://planetarycomputer.microsoft.com/api/stac/v1/collections/terraclimate
+            # uses the similar "application/vnd+zarr" but RFC 6838 mandates
+            # "." rather than "+".
+            media_type="application/vnd.zarr",
         )
         bb = namedtuple("Bounds", ["left", "bottom", "right", "top"])(
             0, -90, 360, 90
