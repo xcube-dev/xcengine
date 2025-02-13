@@ -38,6 +38,8 @@ class NotebookParameters:
     def from_code(cls, code: str) -> "NotebookParameters":
         # TODO run whole notebook up to params cell, not just the params cell!
         # (Because it might use imports etc. from earlier in the notebook.)
+        # This will need some tweaking of the parameter extraction -- see
+        # comment therein.
         return cls(cls.extract_variables(code))
 
     @classmethod
@@ -60,10 +62,11 @@ class NotebookParameters:
 
     @classmethod
     def extract_variables(cls, code: str) -> dict[str, tuple[type, Any]]:
-        _old_locals = set(locals().keys())
-        exec(code)
-        newvars = locals().keys() - _old_locals - {"_old_locals"}
-        return {k: cls.make_param_tuple(locals()[k]) for k in newvars}
+        # TODO: just working on a single code block is insufficient:
+        # We should execute everything up to the params cell, but only extract
+        # variables defined in the params cell.
+        exec(code, globals(), locals_ := {})
+        return {k: cls.make_param_tuple(locals_[k]) for k in (locals_.keys())}
 
     @staticmethod
     def make_param_tuple(value: Any) -> tuple[type, Any]:
