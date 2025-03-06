@@ -1,4 +1,5 @@
 [![Unit tests](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml/badge.svg)](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml)
+[![codecov](https://codecov.io/gh/xcube-dev/xcengine/graph/badge.svg?token=dTPaJB6nR3)](https://codecov.io/gh/xcube-dev/xcengine)
 
 # xcengine: turn Jupyter notebooks into Application Packages
 
