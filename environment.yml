@@ -10,6 +10,7 @@ dependencies:
   - ipython  # Used by nbconvert to transform IPython syntax to pure Python
   - nbconvert
   - nbformat
+  - pystac
   - pyyaml
   - xcube  # See note below
   # test dependencies
