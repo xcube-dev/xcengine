@@ -101,7 +101,7 @@ class NotebookParameters:
 
     def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
         return self.get_cwl_workflow_input(var_name) | {
-            "inputBinding": {"prefix": f"--{var_name.replace("_", "-")}"}
+            "inputBinding": {"prefix": f'--{var_name.replace("_", "-")}'}
         }
 
     def to_yaml(self) -> str:
