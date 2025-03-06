@@ -23,10 +23,11 @@ jobs:
         cache-environment: false
         create-args: python=${{ matrix.python-version }}
         post-cleanup: 'all'
-    - name: Print Python version
+    - name: Install xcengine
       shell: bash -el {0}
       run: |
         python --version
+        pip install --no-deps --editable .
     - name: Run pytest
       shell: bash -el {0}
       run: |
