@@ -3,17 +3,19 @@ channels:
   - conda-forge
 dependencies:
   # Python
-  - python >=3.10
+  - python >=3.11
   # Required
   - click
   - docker-py
   - ipython  # Used by nbconvert to transform IPython syntax to pure Python
   - nbconvert
   - nbformat
+  - pystac
   - pyyaml
   - xcube  # See note below
   # test dependencies
   - pytest
+  - pytest-cov
 
 # Note: xcube is not required for the conversion itself, but is required
 # to run generated scripts outside containers ("create" mode).
