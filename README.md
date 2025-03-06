@@ -1,3 +1,5 @@
+[![Unit tests](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml/badge.svg)](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml)
+
 # xcengine: turn Jupyter notebooks into Application Packages
 
 xcengine provides tools to convert a Jupyter notebook into one of several
