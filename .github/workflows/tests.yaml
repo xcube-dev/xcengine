@@ -24,8 +24,10 @@ jobs:
         create-args: python=${{ matrix.python-version }}
         post-cleanup: 'all'
     - name: Print Python version
+      shell: bash -el {0}
       run: |
         python --version
     - name: Run pytest
+      shell: bash -el {0}
       run: |
         pytest
