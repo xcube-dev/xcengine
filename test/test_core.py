@@ -1,5 +1,7 @@
 import json
 import pathlib
+from io import BufferedReader
+
 import pytest
 from unittest.mock import Mock
 
@@ -9,6 +11,8 @@ import xcengine.core
 import xcengine.parameters
 
 from unittest.mock import MagicMock, patch
+
+from xcengine.core import ChunkStream
 
 
 def test_init_runner_invalid_image_type():
@@ -72,3 +76,12 @@ def test_pip(mock_run):
     assert not inspector.is_local("textdistance")
     assert not inspector.is_local("pip")
     assert not inspector.is_local("setuptools")
+
+
+def test_chunk_stream():
+    chunks = ["123", "456", "789", "abc"]
+    expected = "".join(chunks).encode()
+    bytegen = (chunk.encode() for chunk in chunks)
+    chunk_stream = ChunkStream(bytegen)
+    assert chunk_stream.readable()
+    assert BufferedReader(chunk_stream).read() == expected
