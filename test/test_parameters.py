@@ -275,12 +275,14 @@ def test_parameters_read_env_arguments(notebook_parameters):
             }.items()
         }
     )
-    assert notebook_parameters.read_params_from_env() == {
+    expected = {
         "some_int": 42,
         "some_float": 3.14159,
         "some_string": "foo",
         "some_bool": False,
     }
+    assert notebook_parameters.read_params_from_env() == expected
+    assert notebook_parameters.read_params_combined([]) == expected
 
 
 def test_parameters_read_params_combined(notebook_parameters):
@@ -290,7 +292,6 @@ def test_parameters_read_params_combined(notebook_parameters):
             prefix + k: v
             for k, v in {
                 "some_int": "42",
-                "some_float": "3.14159",
                 "some_string": "foo",
                 "some_bool": "False",
             }.items()
