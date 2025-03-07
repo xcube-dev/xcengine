@@ -297,7 +297,7 @@ def test_parameters_read_params_combined(notebook_parameters):
             }.items()
         }
     )
-    os.environ.pop("some_float", None)
+    os.environ.pop(prefix + "some_float", None)
     assert notebook_parameters.read_params_combined(
         [
             "execute.py",
