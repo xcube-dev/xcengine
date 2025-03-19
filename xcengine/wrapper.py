@@ -25,10 +25,13 @@ def __xce_set_params():
     )
     globals().update(params.read_params_combined(sys.argv))
 
+
 if "XC_USER_CODE_PATH" in os.environ:
     __user_code_path = pathlib.Path(os.environ["XC_USER_CODE_PATH"])
 else:
-    __user_code_path = pathlib.Path(__file__).with_name("user_code.py").resolve()
+    __user_code_path = (
+        pathlib.Path(__file__).with_name("user_code.py").resolve()
+    )
 with __user_code_path.open() as fh:
     user_code = fh.read()
 

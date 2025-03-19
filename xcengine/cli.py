@@ -12,6 +12,7 @@ import tempfile
 
 import click
 import yaml
+from click.core import ParameterSource
 
 from .core import ScriptCreator, ImageBuilder, ContainerRunner
 
@@ -59,15 +60,17 @@ notebook_argument = click.argument(
     ),
 )
 
-
-@cli.command(help="Create a compute engine script on the host system")
-@batch_option
-@click.option(
+server_option = click.option(
     "-s",
     "--server",
     is_flag=True,
     help="Run the script as an xcube server after creating it.",
 )
+
+
+@cli.command(help="Create a compute engine script on the host system")
+@batch_option
+@server_option
 @from_saved_option
 @click.option(
     "-c",
@@ -149,9 +152,7 @@ def build(
     tag: str,
     eoap: pathlib.Path,
 ) -> None:
-    init_args = dict(
-        notebook=notebook, environment=environment, tag=tag
-    )
+    init_args = dict(notebook=notebook, environment=environment, tag=tag)
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
@@ -169,31 +170,41 @@ def build(
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
 @batch_option
+@server_option
 @click.option(
-    "-s",
-    "--server",
+    "-p",
+    "--port",
     is_flag=False,
-    flag_value=-1,
     type=int,
-    default="8080",
-    help="Run as xcube server after creating, mapping to specified "
-         "host port (default: 8080).",
+    default=8080,
+    help="Host port for xcube server (default: 8080). Implies --server.",
 )
 @from_saved_option
 @output_option
 @keep_option
 @click.argument("image", type=str)
+@click.pass_context
 def run(
+    ctx: click.Context,
     batch: bool,
-    server: int,
+    server: False,
+    port: int,
     from_saved: bool,
     keep: bool,
     image: str,
     output: pathlib.Path,
 ) -> None:
     runner = ContainerRunner(image=image, output_dir=output)
+    port_specified_explicitly = (
+        ctx.get_parameter_source("port")
+        is not click.core.ParameterSource.DEFAULT
+    )
+    actual_port = port if server or port_specified_explicitly else None
     runner.run(
-        run_batch=batch, server_port=server, from_saved=from_saved, keep=keep
+        run_batch=batch,
+        host_port=actual_port,
+        from_saved=from_saved,
+        keep=keep,
     )
 
 

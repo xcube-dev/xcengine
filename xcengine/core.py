@@ -306,25 +306,25 @@ class ContainerRunner:
         return self._client
 
     def run(
-        self, run_batch: bool, server_port: int, from_saved: bool, keep: bool
+        self,
+        run_batch: bool,
+        host_port: int | None,
+        from_saved: bool,
+        keep: bool,
     ):
         LOGGER.info(f"Running container from image {self.image.short_id}")
         LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
         command = (
             ["python", "execute.py"]
             + (["--batch"] if run_batch else [])
-            + (["--server"] if server_port > -1 else [])
+            + (["--server"] if host_port is not None else [])
             + (["--from-saved"] if from_saved else [])
         )
         run_args = dict(
-            image=self.image,
-            command=command,
-            remove=False,
-            detach=True
+            image=self.image, command=command, remove=False, detach=True
         )
-        if server_port > -1:
-            run_args["ports"] = {"8080": server_port}
-        print(run_args)
+        if host_port is not None:
+            run_args["ports"] = {"8080": host_port}
         container: Container = self.client.containers.run(**run_args)
         LOGGER.info(f"Waiting for container {container.short_id} to complete.")
         while container.status in {"created", "running"}:
@@ -341,7 +341,7 @@ class ContainerRunner:
             )
             self.extract_output_from_container(container)
             LOGGER.info(f"Results copied.")
-        if server_port == -1 and not keep:
+        if host_port is None and not keep:
             LOGGER.info(f"Removing container {container.short_id}...")
             container.remove(force=True)
             LOGGER.info(f"Container {container.short_id} removed.")
