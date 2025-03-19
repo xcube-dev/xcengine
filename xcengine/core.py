@@ -153,13 +153,11 @@ class ImageBuilder:
     def __init__(
         self,
         notebook: pathlib.Path,
-        output_dir: pathlib.Path,
         environment: pathlib.Path,
         build_dir: pathlib.Path,
         tag: str | None,
     ):
         self.notebook = notebook
-        self.output_dir = output_dir
         self.environment = environment
         self.build_dir = build_dir
         if tag is None:
@@ -171,13 +169,7 @@ class ImageBuilder:
             self.tag = tag
         self.script_creator = ScriptCreator(self.notebook)
 
-    def build(
-        self,
-        run_batch: bool,
-        run_server: bool,
-        from_saved: bool,
-        keep: bool,
-    ) -> None:
+    def build(self) -> Image:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
             with open(self.environment, "r") as fh:
@@ -192,10 +184,7 @@ class ImageBuilder:
         self.add_packages_to_environment(env_def, ["xcube", "pystac"])
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
-        image: Image = self.build_image()
-        if run_batch or run_server:
-            runner = ContainerRunner(image, self.output_dir)
-            runner.run(run_batch, run_server, from_saved, keep)
+        return self._build_image()
 
     @staticmethod
     def export_conda_env() -> dict:
@@ -253,7 +242,7 @@ class ImageBuilder:
             ensure_present(package)
         return conda_env
 
-    def build_image(self) -> docker.models.images.Image:
+    def _build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
         dockerfile = textwrap.dedent(
             """

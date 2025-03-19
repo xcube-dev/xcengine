@@ -113,9 +113,6 @@ def image_cli():
 @image_cli.command(
     help="Build, and optionally run, a compute engine as a Docker image"
 )
-@batch_option
-@server_option
-@from_saved_option
 @click.option(
     "-b",
     "--build-dir",
@@ -123,7 +120,6 @@ def image_cli():
     help="Build directory to use for preparing the Docker image. If not "
     "specified, an automatically created temporary directory will be used.",
 )
-@keep_option
 @click.option(
     "-e",
     "--environment",
@@ -150,10 +146,6 @@ def image_cli():
 )
 @notebook_argument
 def build(
-    batch: bool,
-    server: bool,
-    from_saved: bool,
-    keep: bool,
     build_dir: pathlib.Path,
     notebook: pathlib.Path,
     output: pathlib.Path,
@@ -162,23 +154,21 @@ def build(
     eoap: pathlib.Path,
 ) -> None:
     init_args = dict(
-        notebook=notebook, output_dir=output, environment=environment, tag=tag
-    )
-    build_args = dict(
-        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
+        notebook=notebook, environment=environment, tag=tag
     )
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
-        image_builder.build(**build_args)
+        image = image_builder.build()
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_builder = ImageBuilder(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
-            image_builder.build(**build_args)
+            image = image_builder.build()
     if eoap:
         eoap.write_text(yaml.dump(image_builder.create_cwl()))
+    print(f"Built image with tags {image.tags}")
 
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
