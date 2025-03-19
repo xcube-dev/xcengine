@@ -30,13 +30,6 @@ batch_option = click.option(
     "-b", "--batch", is_flag=True, help="Run as batch script after creating"
 )
 
-server_option = click.option(
-    "-s",
-    "--server",
-    is_flag=True,
-    help="Run as xcube server script after creating",
-)
-
 output_option = click.option(
     "-o",
     "--output",
@@ -69,7 +62,12 @@ notebook_argument = click.argument(
 
 @cli.command(help="Create a compute engine script on the host system")
 @batch_option
-@server_option
+@click.option(
+    "-s",
+    "--server",
+    is_flag=True,
+    help="Run the script as an xcube server after creating it.",
+)
 @from_saved_option
 @click.option(
     "-c",
@@ -127,7 +125,6 @@ def image_cli():
     help="Conda environment file to use in Docker image. "
     "If not specified, try to reproduce the current environment.",
 )
-@output_option
 @click.option(
     "-t",
     "--tag",
@@ -148,7 +145,6 @@ def image_cli():
 def build(
     build_dir: pathlib.Path,
     notebook: pathlib.Path,
-    output: pathlib.Path,
     environment: pathlib.Path,
     tag: str,
     eoap: pathlib.Path,
@@ -173,14 +169,23 @@ def build(
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
 @batch_option
-@server_option
+@click.option(
+    "-s",
+    "--server",
+    is_flag=False,
+    flag_value=-1,
+    type=int,
+    default="8080",
+    help="Run as xcube server after creating, mapping to specified "
+         "host port (default: 8080).",
+)
 @from_saved_option
 @output_option
 @keep_option
 @click.argument("image", type=str)
 def run(
     batch: bool,
-    server: bool,
+    server: int,
     from_saved: bool,
     keep: bool,
     image: str,
@@ -188,7 +193,7 @@ def run(
 ) -> None:
     runner = ContainerRunner(image=image, output_dir=output)
     runner.run(
-        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
+        run_batch=batch, server_port=server, from_saved=from_saved, keep=keep
     )
 
 
