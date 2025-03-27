@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2024 by Brockmann Consult GmbH
+# Copyright (c) 2024-2025 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
@@ -12,6 +12,7 @@ import tempfile
 
 import click
 import yaml
+from click.core import ParameterSource
 
 from .core import ScriptCreator, ImageBuilder, ContainerRunner
 
@@ -28,13 +29,6 @@ def cli(verbose):
 
 batch_option = click.option(
     "-b", "--batch", is_flag=True, help="Run as batch script after creating"
-)
-
-server_option = click.option(
-    "-s",
-    "--server",
-    is_flag=True,
-    help="Run as xcube server script after creating",
 )
 
 output_option = click.option(
@@ -64,6 +58,13 @@ notebook_argument = click.argument(
     type=click.Path(
         path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=True
     ),
+)
+
+server_option = click.option(
+    "-s",
+    "--server",
+    is_flag=True,
+    help="Run the script as an xcube server after creating it.",
 )
 
 
@@ -113,9 +114,6 @@ def image_cli():
 @image_cli.command(
     help="Build, and optionally run, a compute engine as a Docker image"
 )
-@batch_option
-@server_option
-@from_saved_option
 @click.option(
     "-b",
     "--build-dir",
@@ -123,7 +121,6 @@ def image_cli():
     help="Build directory to use for preparing the Docker image. If not "
     "specified, an automatically created temporary directory will be used.",
 )
-@keep_option
 @click.option(
     "-e",
     "--environment",
@@ -131,7 +128,6 @@ def image_cli():
     help="Conda environment file to use in Docker image. "
     "If not specified, try to reproduce the current environment.",
 )
-@output_option
 @click.option(
     "-t",
     "--tag",
@@ -150,55 +146,65 @@ def image_cli():
 )
 @notebook_argument
 def build(
-    batch: bool,
-    server: bool,
-    from_saved: bool,
-    keep: bool,
     build_dir: pathlib.Path,
     notebook: pathlib.Path,
-    output: pathlib.Path,
     environment: pathlib.Path,
     tag: str,
     eoap: pathlib.Path,
 ) -> None:
-    init_args = dict(
-        notebook=notebook, output_dir=output, environment=environment, tag=tag
-    )
-    build_args = dict(
-        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
-    )
+    init_args = dict(notebook=notebook, environment=environment, tag=tag)
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
-        image_builder.build(**build_args)
+        image = image_builder.build()
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_builder = ImageBuilder(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
-            image_builder.build(**build_args)
+            image = image_builder.build()
     if eoap:
         eoap.write_text(yaml.dump(image_builder.create_cwl()))
+    print(f"Built image with tags {image.tags}")
 
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
 @batch_option
 @server_option
+@click.option(
+    "-p",
+    "--port",
+    is_flag=False,
+    type=int,
+    default=8080,
+    help="Host port for xcube server (default: 8080). Implies --server.",
+)
 @from_saved_option
 @output_option
 @keep_option
 @click.argument("image", type=str)
+@click.pass_context
 def run(
+    ctx: click.Context,
     batch: bool,
-    server: bool,
+    server: False,
+    port: int,
     from_saved: bool,
     keep: bool,
     image: str,
     output: pathlib.Path,
 ) -> None:
     runner = ContainerRunner(image=image, output_dir=output)
+    port_specified_explicitly = (
+        ctx.get_parameter_source("port")
+        is not click.core.ParameterSource.DEFAULT
+    )
+    actual_port = port if server or port_specified_explicitly else None
     runner.run(
-        run_batch=batch, run_server=server, from_saved=from_saved, keep=keep
+        run_batch=batch,
+        host_port=actual_port,
+        from_saved=from_saved,
+        keep=keep,
     )
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024 by Brockmann Consult GmbH
+# Copyright (c) 2024-2025 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
@@ -153,13 +153,11 @@ class ImageBuilder:
     def __init__(
         self,
         notebook: pathlib.Path,
-        output_dir: pathlib.Path,
         environment: pathlib.Path,
         build_dir: pathlib.Path,
         tag: str | None,
     ):
         self.notebook = notebook
-        self.output_dir = output_dir
         self.environment = environment
         self.build_dir = build_dir
         if tag is None:
@@ -171,13 +169,7 @@ class ImageBuilder:
             self.tag = tag
         self.script_creator = ScriptCreator(self.notebook)
 
-    def build(
-        self,
-        run_batch: bool,
-        run_server: bool,
-        from_saved: bool,
-        keep: bool,
-    ) -> None:
+    def build(self) -> Image:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
             with open(self.environment, "r") as fh:
@@ -192,10 +184,7 @@ class ImageBuilder:
         self.add_packages_to_environment(env_def, ["xcube", "pystac"])
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
-        image: Image = self.build_image()
-        if run_batch or run_server:
-            runner = ContainerRunner(image, self.output_dir)
-            runner.run(run_batch, run_server, from_saved, keep)
+        return self._build_image()
 
     @staticmethod
     def export_conda_env() -> dict:
@@ -253,7 +242,7 @@ class ImageBuilder:
             ensure_present(package)
         return conda_env
 
-    def build_image(self) -> docker.models.images.Image:
+    def _build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
         dockerfile = textwrap.dedent(
             """
@@ -317,23 +306,26 @@ class ContainerRunner:
         return self._client
 
     def run(
-        self, run_batch: bool, run_server: bool, from_saved: bool, keep: bool
+        self,
+        run_batch: bool,
+        host_port: int | None,
+        from_saved: bool,
+        keep: bool,
     ):
         LOGGER.info(f"Running container from image {self.image.short_id}")
         LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
         command = (
             ["python", "execute.py"]
             + (["--batch"] if run_batch else [])
-            + (["--server"] if run_server else [])
+            + (["--server"] if host_port is not None else [])
             + (["--from-saved"] if from_saved else [])
         )
-        container: Container = self.client.containers.run(
-            image=self.image,
-            command=command,
-            ports={"8080": 8080},
-            remove=False,
-            detach=True,
+        run_args = dict(
+            image=self.image, command=command, remove=False, detach=True
         )
+        if host_port is not None:
+            run_args["ports"] = {"8080": host_port}
+        container: Container = self.client.containers.run(**run_args)
         LOGGER.info(f"Waiting for container {container.short_id} to complete.")
         while container.status in {"created", "running"}:
             LOGGER.debug(
@@ -349,7 +341,7 @@ class ContainerRunner:
             )
             self.extract_output_from_container(container)
             LOGGER.info(f"Results copied.")
-        if not run_server and not keep:
+        if host_port is None and not keep:
             LOGGER.info(f"Removing container {container.short_id}...")
             container.remove(force=True)
             LOGGER.info(f"Container {container.short_id} removed.")
