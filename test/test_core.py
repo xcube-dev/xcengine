@@ -19,8 +19,6 @@ from xcengine.core import ChunkStream, ImageBuilder
 def test_image_builder_init(init_mock, tmp_path):
     nb_path = tmp_path / "foo.ipynb"
     nb_path.touch()
-    output_path = tmp_path / "output"
-    output_path.mkdir()
     environment = tmp_path / "environment.yml"
     environment.touch()
     build_path = tmp_path / "build"
@@ -29,13 +27,11 @@ def test_image_builder_init(init_mock, tmp_path):
     init_mock.return_value = None
     ib = ImageBuilder(
         notebook=nb_path,
-        output_dir=output_path,
         environment=environment,
         build_dir=build_path,
         tag=tag
     )
     assert ib.notebook == nb_path
-    assert ib.output_dir == output_path
     assert ib.build_dir == build_path
     assert ib.tag == tag
     init_mock.assert_called_once_with(nb_path)
