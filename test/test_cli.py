@@ -67,6 +67,7 @@ def test_image_build(builder_mock, tmp_path):
     tag = "foo"
     instance_mock = builder_mock.return_value = MagicMock()
     result = runner.invoke(cli, ["image", "build", "--tag", tag, str(nb_path)])
+    assert result.output.startswith("Built image")
     assert result.exit_code == 0
     builder_mock.assert_called_once_with(
         notebook=nb_path, environment=None, tag=tag, build_dir=ANY

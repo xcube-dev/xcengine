@@ -152,20 +152,16 @@ def build(
     eoap: pathlib.Path,
 ) -> None:
     init_args = dict(notebook=notebook, environment=environment, tag=tag)
-    pathlib.Path("/home/pont/AAAAARGH").touch()
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
         image = image_builder.build()
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
-            pathlib.Path("/home/pont/gothere1").touch()
             image_builder = ImageBuilder(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
-            pathlib.Path("/home/pont/gothere2").touch()
             image = image_builder.build()
-            pathlib.Path("/home/pont/gothere3").touch()
     if eoap:
         eoap.write_text(yaml.dump(image_builder.create_cwl()))
     print(f"Built image with tags {image.tags}")
