@@ -1,4 +1,4 @@
-from unittest.mock import patch, ANY
+from unittest.mock import patch, ANY, MagicMock
 import pytest
 from click.testing import CliRunner
 
@@ -59,14 +59,33 @@ def test_make_script(
     assert result.exit_code == 0
 
 
-@patch("xcengine.core.ImageBuilder.__init__")
-@patch("xcengine.core.ImageBuilder.build")
-def test_image_build(build_mock, init_mock, tmp_path):
+@patch("xcengine.cli.ImageBuilder")
+def test_image_build(builder_mock, tmp_path):
     nb_path = tmp_path / "foo.ipynb"
     nb_path.touch()
     runner = CliRunner()
     tag = "foo"
+    instance_mock = builder_mock.return_value = MagicMock()
     result = runner.invoke(cli, ["image", "build", "--tag", tag, str(nb_path)])
-    init_mock.assert_called_once_with(
+    assert result.exit_code == 0
+    builder_mock.assert_called_once_with(
         notebook=nb_path, environment=None, tag=tag, build_dir=ANY
+    )
+    instance_mock.build.assert_called_once_with()
+
+@patch("xcengine.cli.ContainerRunner")
+def test_image_run(runner_mock):
+    cli_runner = CliRunner()
+    instance_mock = runner_mock.return_value = MagicMock()
+    result = cli_runner.invoke(
+        cli,
+        ["image", "run", "foo"]
+    )
+    runner_mock.assert_called_once_with(image="foo", output_dir=None)
+    assert result.exit_code == 0
+    instance_mock.run.assert_called_once_with(
+        run_batch=False,
+        host_port=None,
+        from_saved=False,
+        keep=False,
     )
