@@ -14,7 +14,7 @@ import pathlib
 import textwrap
 import time
 import uuid
-from datetime import datetime
+import datetime
 from collections.abc import Mapping, Generator, Iterable
 from typing import Any
 
@@ -150,6 +150,8 @@ class ImageBuilder:
     runs a container initialized from that image.
     """
 
+    tag_format = "xcengine:%Y.%m.%d.%H.%M.%S"
+
     def __init__(
         self,
         notebook: pathlib.Path,
@@ -162,7 +164,7 @@ class ImageBuilder:
         self.build_dir = build_dir
         if tag is None:
             self.tag = (
-                f"xcengine:{datetime.now().strftime('%Y.%m.%d.%H.%M.%S')}"
+                datetime.datetime.now(datetime.UTC).strftime(self.tag_format)
             )
             LOGGER.info(f"No tag specified; using {self.tag}")
         else:

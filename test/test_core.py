@@ -1,5 +1,7 @@
+import datetime
 import json
 import pathlib
+import pytz
 from io import BufferedReader
 
 import pytest
@@ -16,24 +18,32 @@ from xcengine.core import ChunkStream, ImageBuilder
 
 
 @patch("xcengine.core.ScriptCreator.__init__")
-def test_image_builder_init(init_mock, tmp_path):
+@pytest.mark.parametrize("tag", [None, "bar"])
+def test_image_builder_init(init_mock, tmp_path, tag):
     nb_path = tmp_path / "foo.ipynb"
     nb_path.touch()
     environment = tmp_path / "environment.yml"
     environment.touch()
     build_path = tmp_path / "build"
     build_path.mkdir()
-    tag="bar"
     init_mock.return_value = None
     ib = ImageBuilder(
         notebook=nb_path,
         environment=environment,
         build_dir=build_path,
-        tag=tag
+        tag=tag,
     )
     assert ib.notebook == nb_path
     assert ib.build_dir == build_path
-    assert ib.tag == tag
+    if tag is None:
+        assert abs(
+            datetime.datetime.now(datetime.UTC)
+            - pytz.utc.localize(
+                datetime.datetime.strptime(ib.tag, ImageBuilder.tag_format)
+            )
+        ) < datetime.timedelta(seconds=10)
+    else:
+        assert ib.tag == tag
     init_mock.assert_called_once_with(nb_path)
 
 
