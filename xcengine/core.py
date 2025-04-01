@@ -163,8 +163,8 @@ class ImageBuilder:
         self.environment = environment
         self.build_dir = build_dir
         if tag is None:
-            self.tag = (
-                datetime.datetime.now(datetime.UTC).strftime(self.tag_format)
+            self.tag = datetime.datetime.now(datetime.UTC).strftime(
+                self.tag_format
             )
             LOGGER.info(f"No tag specified; using {self.tag}")
         else:

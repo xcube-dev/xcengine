@@ -26,30 +26,11 @@ def cli(verbose):
         logging.getLogger().setLevel(logging.DEBUG)
 
 
-batch_option = click.option(
-    "-b", "--batch", is_flag=True, help="Run as batch script after creating"
-)
-
-output_option = click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Write output data to this directory, which will be created if it "
-    "does not exist already.",
-)
-
 from_saved_option = click.option(
     "-f",
     "--from-saved",
     is_flag=True,
-    help="If batch and server both used, serve datasets from saved Zarrs",
-)
-
-keep_option = click.option(
-    "-k",
-    "--keep",
-    is_flag=True,
-    help="Keep container after it has finished running.",
+    help="If --batch and --server both used, serve datasets from saved Zarrs",
 )
 
 notebook_argument = click.argument(
@@ -59,17 +40,22 @@ notebook_argument = click.argument(
     ),
 )
 
-server_option = click.option(
+
+@cli.command(
+    help="Create a compute engine script on the host system. "
+    "The output directory will be used for the generated "
+    "script, supporting code modules, and any output "
+    "produced by running the script."
+)
+@click.option(
+    "-b", "--batch", is_flag=True, help="Run as batch script after creating"
+)
+@click.option(
     "-s",
     "--server",
     is_flag=True,
     help="Run the script as an xcube server after creating it.",
 )
-
-
-@cli.command(help="Create a compute engine script on the host system")
-@batch_option
-@server_option
 @from_saved_option
 @click.option(
     "-c",
@@ -133,7 +119,7 @@ def image_cli():
     type=str,
     default=None,
     help="Tag to apply to the Docker image. "
-    "If not specified, a timestamp-based tag will be generated automatically",
+    "If not specified, a timestamp-based tag will be generated automatically.",
 )
 @click.option(
     "-a",
@@ -168,8 +154,18 @@ def build(
 
 
 @image_cli.command(help="Run a compute engine image as a Docker container")
-@batch_option
-@server_option
+@click.option(
+    "-b",
+    "--batch",
+    is_flag=True,
+    help="Run the compute engine as a batch script",
+)
+@click.option(
+    "-s",
+    "--server",
+    is_flag=True,
+    help="Run the compute engine as an xcube server.",
+)
 @click.option(
     "-p",
     "--port",
@@ -179,8 +175,19 @@ def build(
     help="Host port for xcube server (default: 8080). Implies --server.",
 )
 @from_saved_option
-@output_option
-@keep_option
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
+    help="Write output data to this directory, which will be created if it "
+    "does not exist already.",
+)
+@click.option(
+    "-k",
+    "--keep",
+    is_flag=True,
+    help="Keep container after it has finished running.",
+)
 @click.argument("image", type=str)
 @click.pass_context
 def run(
