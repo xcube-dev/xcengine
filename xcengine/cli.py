@@ -30,7 +30,8 @@ from_saved_option = click.option(
     "-f",
     "--from-saved",
     is_flag=True,
-    help="If --batch and --server both used, serve datasets from saved Zarrs",
+    help="If --batch and --server both used, serve datasets from saved Zarrs "
+         "rather than computing them on the fly.",
 )
 
 notebook_argument = click.argument(
@@ -127,7 +128,7 @@ def image_cli():
     type=click.Path(path_type=pathlib.Path, writable=True),
     default=None,
     help="Write a CWL file defining an Earth Observation Application Package "
-    "to the specified path",
+    "to the specified path.",
 )
 @notebook_argument
 def build(
@@ -153,12 +154,13 @@ def build(
     print(f"Built image with tags {image.tags}")
 
 
-@image_cli.command(help="Run a compute engine image as a Docker container")
+@image_cli.command(help="Run a compute engine image as a Docker container.")
 @click.option(
     "-b",
     "--batch",
     is_flag=True,
-    help="Run the compute engine as a batch script",
+    help="Run the compute engine as a batch script. Use with the --output "
+         "option to copy output out of the container.",
 )
 @click.option(
     "-s",
@@ -179,7 +181,7 @@ def build(
     "-o",
     "--output",
     type=click.Path(path_type=pathlib.Path, dir_okay=True, file_okay=False),
-    help="Write output data to this directory, which will be created if it "
+    help="Write any output data to this directory, which will be created if it "
     "does not exist already.",
 )
 @click.option(

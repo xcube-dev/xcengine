@@ -336,7 +336,9 @@ class ContainerRunner:
             )
             time.sleep(2)
             container.reload()
-        LOGGER.info(f"Container {container.short_id} is {container.status}.")
+        LOGGER.info(
+            f'Container {container.short_id} has status "{container.status}".'
+        )
         if self.output_dir:
             LOGGER.info(
                 f"Copying results from container to {self.output_dir}..."
