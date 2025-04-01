@@ -12,10 +12,12 @@ dependencies:
   - nbformat
   - pystac
   - pyyaml
+  - xarray
   - xcube  # See note below
   # test dependencies
   - pytest
   - pytest-cov
 
 # Note: xcube is not required for the conversion itself, but is required
-# to run generated scripts outside containers ("create" mode).
+# to run generated scripts outside containers ("create" mode). xcube is
+# also needed to unit test the supporting code that runs in the container.
