@@ -11,14 +11,21 @@ authors = [
   {name = "Pontus Lurcock", email = "pontus.lurcock@brockmann-consult.de"}
 ]
 description = """\
-  Tools for the Open-Earth-Monitor compute engine\
+  Create OGC Earth Observation Application Packages from Jupyter notebooks\
   """
 keywords = [
   "analysis ready data", "data science", "datacube", "xarray", "zarr"
 ]
 readme = {file = "README.md", content-type = "text/markdown"}
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering"
+]
 dependencies = [
   "click",
   "docker",
@@ -64,3 +71,4 @@ Documentation = "https://github.com/xcube-dev/xcengine/blob/main/README.md"
 Issues = "https://github.com/xcube-dev/xcengine/issues"
 Changelog = "https://github.com/xcube-dev/xcengine/blob/main/CHANGES.md"
 Repository = "https://github.com/xcube-dev/xcengine"
+Homepage = "https://github.com/xcube-dev/xcengine"
