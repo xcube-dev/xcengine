@@ -35,12 +35,12 @@ class NotebookParameters:
             self.cwl_params["product"] = "Directory", None
 
     @classmethod
-    def from_code(cls, code: str) -> "NotebookParameters":
+    def from_code(cls, code: str, setup_code: str | None = None) -> "NotebookParameters":
         # TODO run whole notebook up to params cell, not just the params cell!
         # (Because it might use imports etc. from earlier in the notebook.)
         # This will need some tweaking of the parameter extraction -- see
         # comment therein.
-        return cls(cls.extract_variables(code))
+        return cls(cls.extract_variables(code, setup_code))
 
     @classmethod
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
@@ -61,12 +61,17 @@ class NotebookParameters:
             return cls.from_yaml(fh)
 
     @classmethod
-    def extract_variables(cls, code: str) -> dict[str, tuple[type, Any]]:
-        # TODO: just working on a single code block is insufficient:
-        # We should execute everything up to the params cell, but only extract
-        # variables defined in the params cell.
-        exec(code, globals(), locals_ := {})
-        return {k: cls.make_param_tuple(locals_[k]) for k in (locals_.keys())}
+    def extract_variables(cls, code: str, setup_code: str | None = None) -> dict[str, tuple[type, Any]]:
+        pass
+        if setup_code is None:
+            locals_ = {}
+            old_locals = {}
+        else:
+            exec(setup_code, globals(), locals_ := {})
+            old_locals = locals_.copy()
+        exec(code, globals(), locals_)
+        new_vars = locals_.keys() - old_locals.keys()
+        return {k: cls.make_param_tuple(locals_[k]) for k in new_vars}
 
     @staticmethod
     def make_param_tuple(value: Any) -> tuple[type, Any]:

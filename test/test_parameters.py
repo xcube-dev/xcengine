@@ -156,6 +156,25 @@ some_bool = False
     )
 
 
+def test_parameters_from_code_with_setup(expected_vars):
+    assert (
+        xcengine.parameters.NotebookParameters.from_code(
+            """
+some_int = 2 * half_of_some_int
+some_float = 3.14159
+some_string = some_uppercase_string.lower()
+some_bool = not not_some_bool
+    """,
+            setup_code="""
+half_of_some_int = 21
+some_uppercase_string = "FOO"
+not_some_bool = True
+            """
+        ).params
+        == expected_vars
+    )
+
+
 def test_parameters_get_workflow_inputs(notebook_parameters):
     assert notebook_parameters.get_cwl_workflow_inputs() == {
         "some_int": {
