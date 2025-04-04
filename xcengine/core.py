@@ -39,7 +39,7 @@ class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
     notebook: nbformat.NotebookNode
-    nb_params: NotebookParameters
+    nb_params: NotebookParameters = NotebookParameters({})
 
     def __init__(self, nb_path: pathlib.Path):
         with open(nb_path) as fh:

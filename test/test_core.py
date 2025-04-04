@@ -127,3 +127,9 @@ def test_script_creator_init_with_parameters():
         "parameter_1": (int, 6),
         "parameter_2": (str, "default value"),
     }
+
+def test_script_creator_init_no_parameters():
+    script_creator = ScriptCreator(
+        pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
+    )
+    assert script_creator.nb_params.params == {}
