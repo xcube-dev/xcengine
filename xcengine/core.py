@@ -39,7 +39,7 @@ class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
     notebook: nbformat.NotebookNode
-    nb_params: NotebookParameters
+    nb_params: NotebookParameters = NotebookParameters({})
 
     def __init__(self, nb_path: pathlib.Path):
         with open(nb_path) as fh:
@@ -76,7 +76,10 @@ class ScriptCreator:
             setup_code = "\n".join(
                 map(
                     operator.attrgetter("source"),
-                    self.notebook.cells[:params_cell_index],
+                    filter(
+                        lambda c: c.cell_type == "code",
+                        self.notebook.cells[:params_cell_index],
+                    ),
                 )
             )
             self.nb_params = NotebookParameters.from_code(
