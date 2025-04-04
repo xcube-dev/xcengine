@@ -214,7 +214,3 @@ def run(
         from_saved=from_saved,
         keep=keep,
     )
-
-
-if __name__ == "__main__":
-    cli()

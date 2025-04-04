@@ -1,3 +1,5 @@
+import runpy
+import subprocess
 from unittest.mock import patch, ANY, MagicMock
 import pytest
 from click.testing import CliRunner
@@ -59,18 +61,27 @@ def test_make_script(
     assert result.exit_code == 0
 
 
+@pytest.mark.parametrize("specify_dir", [False, True])
 @patch("xcengine.cli.ImageBuilder")
-def test_image_build(builder_mock, tmp_path):
-    nb_path = tmp_path / "foo.ipynb"
-    nb_path.touch()
+def test_image_build(builder_mock, tmp_path, specify_dir):
+    (nb_path := tmp_path / "foo.ipynb").touch()
+    (build_dir := tmp_path / "build").mkdir()
     runner = CliRunner()
     tag = "foo"
     instance_mock = builder_mock.return_value = MagicMock()
-    result = runner.invoke(cli, ["image", "build", "--tag", tag, str(nb_path)])
+    result = runner.invoke(
+        cli,
+        ["image", "build", "--tag", tag]
+        + (["--build-dir", str(build_dir)] if specify_dir else [])
+        + [str(nb_path)],
+    )
     assert result.output.startswith("Built image")
     assert result.exit_code == 0
     builder_mock.assert_called_once_with(
-        notebook=nb_path, environment=None, tag=tag, build_dir=ANY
+        notebook=nb_path,
+        environment=None,
+        tag=tag,
+        build_dir=(build_dir if specify_dir else ANY),
     )
     instance_mock.build.assert_called_once_with()
 
