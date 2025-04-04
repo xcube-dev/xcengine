@@ -2,8 +2,10 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
+import functools
 import io
 import json
+import operator
 import os
 import shutil
 import sys
@@ -71,8 +73,15 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
+            setup_code = "\n".join(
+                map(
+                    operator.attrgetter("source"),
+                    self.notebook.cells[:params_cell_index],
+                )
+            )
             self.nb_params = NotebookParameters.from_code(
-                self.notebook.cells[params_cell_index].source
+                self.notebook.cells[params_cell_index].source,
+                setup_code=setup_code,
             )
             self.notebook.cells.insert(
                 params_cell_index + 1,

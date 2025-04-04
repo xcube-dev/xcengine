@@ -14,7 +14,7 @@ import xcengine.parameters
 
 from unittest.mock import MagicMock, patch
 
-from xcengine.core import ChunkStream, ImageBuilder
+from xcengine.core import ChunkStream, ImageBuilder, ScriptCreator
 
 
 @patch("xcengine.core.ScriptCreator.__init__")
@@ -117,3 +117,13 @@ def test_chunk_stream():
     chunk_stream = ChunkStream(bytegen)
     assert chunk_stream.readable()
     assert BufferedReader(chunk_stream).read() == expected
+
+
+def test_script_creator_init():
+    script_creator = ScriptCreator(
+        pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    )
+    assert script_creator.nb_params.params == {
+        "parameter_1": (int, 6),
+        "parameter_2": (str, "default value"),
+    }

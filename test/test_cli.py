@@ -74,14 +74,12 @@ def test_image_build(builder_mock, tmp_path):
     )
     instance_mock.build.assert_called_once_with()
 
+
 @patch("xcengine.cli.ContainerRunner")
 def test_image_run(runner_mock):
     cli_runner = CliRunner()
     instance_mock = runner_mock.return_value = MagicMock()
-    result = cli_runner.invoke(
-        cli,
-        ["image", "run", "foo"]
-    )
+    result = cli_runner.invoke(cli, ["image", "run", "foo"])
     runner_mock.assert_called_once_with(image="foo", output_dir=None)
     assert result.exit_code == 0
     instance_mock.run.assert_called_once_with(

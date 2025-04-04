@@ -169,7 +169,7 @@ some_bool = not not_some_bool
 half_of_some_int = 21
 some_uppercase_string = "FOO"
 not_some_bool = True
-            """
+            """,
         ).params
         == expected_vars
     )

@@ -35,7 +35,9 @@ class NotebookParameters:
             self.cwl_params["product"] = "Directory", None
 
     @classmethod
-    def from_code(cls, code: str, setup_code: str | None = None) -> "NotebookParameters":
+    def from_code(
+        cls, code: str, setup_code: str | None = None
+    ) -> "NotebookParameters":
         # TODO run whole notebook up to params cell, not just the params cell!
         # (Because it might use imports etc. from earlier in the notebook.)
         # This will need some tweaking of the parameter extraction -- see
@@ -61,8 +63,9 @@ class NotebookParameters:
             return cls.from_yaml(fh)
 
     @classmethod
-    def extract_variables(cls, code: str, setup_code: str | None = None) -> dict[str, tuple[type, Any]]:
-        pass
+    def extract_variables(
+        cls, code: str, setup_code: str | None = None
+    ) -> dict[str, tuple[type, Any]]:
         if setup_code is None:
             locals_ = {}
             old_locals = {}
