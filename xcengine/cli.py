@@ -31,7 +31,7 @@ from_saved_option = click.option(
     "--from-saved",
     is_flag=True,
     help="If --batch and --server both used, serve datasets from saved Zarrs "
-         "rather than computing them on the fly.",
+    "rather than computing them on the fly.",
 )
 
 notebook_argument = click.argument(
@@ -160,7 +160,7 @@ def build(
     "--batch",
     is_flag=True,
     help="Run the compute engine as a batch script. Use with the --output "
-         "option to copy output out of the container.",
+    "option to copy output out of the container.",
 )
 @click.option(
     "-s",

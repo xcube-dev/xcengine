@@ -14,7 +14,7 @@ import xcengine.parameters
 
 from unittest.mock import MagicMock, patch
 
-from xcengine.core import ChunkStream, ImageBuilder
+from xcengine.core import ChunkStream, ImageBuilder, ScriptCreator
 
 
 @patch("xcengine.core.ScriptCreator.__init__")
@@ -47,13 +47,13 @@ def test_image_builder_init(init_mock, tmp_path, tag):
     init_mock.assert_called_once_with(nb_path)
 
 
-def test_init_runner_invalid_image_type():
+def test_runner_init_invalid_image_type():
     with pytest.raises(ValueError, match='Invalid type "int"'):
         # noinspection PyTypeChecker
         xcengine.core.ContainerRunner(666, pathlib.Path("/foo"))
 
 
-def test_init_runner_with_string():
+def test_runner_init_with_string():
     image_name = "foo"
     image_mock = Mock(docker.models.images.Image)
     client_mock = Mock(docker.client.DockerClient)
@@ -69,7 +69,7 @@ def test_init_runner_with_string():
     assert image_mock == runner.image
 
 
-def test_init_runner_with_image():
+def test_runner_init_with_image():
     runner = xcengine.core.ContainerRunner(
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
@@ -117,3 +117,13 @@ def test_chunk_stream():
     chunk_stream = ChunkStream(bytegen)
     assert chunk_stream.readable()
     assert BufferedReader(chunk_stream).read() == expected
+
+
+def test_script_creator_init():
+    script_creator = ScriptCreator(
+        pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    )
+    assert script_creator.nb_params.params == {
+        "parameter_1": (int, 6),
+        "parameter_2": (str, "default value"),
+    }
