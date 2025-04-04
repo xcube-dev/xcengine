@@ -119,7 +119,7 @@ def test_chunk_stream():
     assert BufferedReader(chunk_stream).read() == expected
 
 
-def test_script_creator_init():
+def test_script_creator_init_with_parameters():
     script_creator = ScriptCreator(
         pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
     )

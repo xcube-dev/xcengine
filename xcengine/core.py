@@ -76,7 +76,10 @@ class ScriptCreator:
             setup_code = "\n".join(
                 map(
                     operator.attrgetter("source"),
-                    self.notebook.cells[:params_cell_index],
+                    filter(
+                        lambda c: c.cell_type == "code",
+                        self.notebook.cells[:params_cell_index],
+                    ),
                 )
             )
             self.nb_params = NotebookParameters.from_code(
