@@ -2,10 +2,8 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
-import functools
 import io
 import json
-import operator
 import os
 import shutil
 import sys
@@ -55,6 +53,10 @@ class ScriptCreator:
         exporter = nbconvert.PythonExporter()
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
+            fh.write(
+                    "import unittest.mock\n"
+                    "get_ipython = unittest.mock.MagicMock\n"
+            )
             fh.write(body)
         parent_dir = pathlib.Path(__file__).parent
         shutil.copy2(parent_dir / "wrapper.py", output_dir / "execute.py")
@@ -81,7 +83,7 @@ class ScriptCreator:
             # IPython magic commands in the notebook. This effectively
             # turns them into no-ops
             setup_code = (
-                "import unittest\n"
+                "import unittest.mock\n"
                 "get_ipython = unittest.mock.MagicMock\n"
                 + setup_code
             )
