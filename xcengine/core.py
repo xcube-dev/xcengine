@@ -2,10 +2,8 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
-import functools
 import io
 import json
-import operator
 import os
 import shutil
 import sys
@@ -55,6 +53,10 @@ class ScriptCreator:
         exporter = nbconvert.PythonExporter()
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
+            fh.write(
+                    "import unittest.mock\n"
+                    "get_ipython = unittest.mock.MagicMock\n"
+            )
             fh.write(body)
         parent_dir = pathlib.Path(__file__).parent
         shutil.copy2(parent_dir / "wrapper.py", output_dir / "execute.py")
@@ -73,17 +75,23 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
-            setup_code = "\n".join(
-                map(
-                    operator.attrgetter("source"),
-                    filter(
-                        lambda c: c.cell_type == "code",
-                        self.notebook.cells[:params_cell_index],
-                    ),
-                )
+            setup_node = nbformat.from_dict(self.notebook)
+            setup_node.cells = setup_node.cells[:params_cell_index]
+            exporter = nbconvert.PythonExporter()
+            (setup_code, _) = exporter.from_notebook_node(setup_node)
+            # Mock out the get_ipython function in case there are any
+            # IPython magic commands in the notebook. This effectively
+            # turns them into no-ops
+            setup_code = (
+                "import unittest.mock\n"
+                "get_ipython = unittest.mock.MagicMock\n"
+                + setup_code
             )
+            params_node = nbformat.from_dict(self.notebook)
+            params_node.cells = [params_node.cells[params_cell_index]]
+            (params_code, _) = exporter.from_notebook_node(params_node)
             self.nb_params = NotebookParameters.from_code(
-                self.notebook.cells[params_cell_index].source,
+                params_code,
                 setup_code=setup_code,
             )
             self.notebook.cells.insert(
