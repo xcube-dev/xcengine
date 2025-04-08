@@ -128,8 +128,30 @@ def test_script_creator_init_with_parameters():
         "parameter_2": (str, "default value"),
     }
 
+
 def test_script_creator_init_no_parameters():
     script_creator = ScriptCreator(
         pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
     )
     assert script_creator.nb_params.params == {}
+
+
+@pytest.mark.parametrize("clear", [True, False])
+def test_script_creator_convert_notebook_to_script(tmp_path, clear):
+    (output_dir := tmp_path / "output").mkdir()
+    extraneous_filename = "foo"
+    (output_dir / extraneous_filename).touch()
+    script_creator = ScriptCreator(
+        pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    )
+    script_creator.convert_notebook_to_script(output_dir, clear)
+    filenames = {
+        "user_code.py",
+        "execute.py",
+        "parameters.py",
+        "parameters.yaml",
+        "util.py",
+    } | (set() if clear else {extraneous_filename})
+    expected = {output_dir / f for f in filenames}
+    assert set(output_dir.iterdir()) == expected
+    # TODO test execution as well?

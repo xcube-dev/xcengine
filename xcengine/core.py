@@ -54,8 +54,8 @@ class ScriptCreator:
         (body, resources) = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
             fh.write(
-                    "import unittest.mock\n"
-                    "get_ipython = unittest.mock.MagicMock\n"
+                "import unittest.mock\n"
+                "get_ipython = unittest.mock.MagicMock\n"
             )
             fh.write(body)
         parent_dir = pathlib.Path(__file__).parent
@@ -84,8 +84,7 @@ class ScriptCreator:
             # turns them into no-ops
             setup_code = (
                 "import unittest.mock\n"
-                "get_ipython = unittest.mock.MagicMock\n"
-                + setup_code
+                "get_ipython = unittest.mock.MagicMock\n" + setup_code
             )
             params_node = nbformat.from_dict(self.notebook)
             params_node.cells = [params_node.cells[params_cell_index]]
