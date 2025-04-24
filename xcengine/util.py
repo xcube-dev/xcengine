@@ -29,7 +29,7 @@ def write_stac(
     for ds_name in datasets:
         asset_path = str(stac_root / "output" / (ds_name + ".zarr"))
         asset = pystac.Asset(
-            roles=["data"],
+            roles=["data", "visual"],
             href=asset_path,
             # No official media type for Zarr yet, but "application/vnd.zarr"
             # https://github.com/radiantearth/stac-spec/issues/713 and listed in
