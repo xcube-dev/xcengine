@@ -4,6 +4,8 @@
 * Handle notebooks without parameters (#11)
 * Handle non-code cells (#12)
 * Ignore magic commands in input notebooks (#14)
+* Add NDVI sample notebook
+* Improve STAC output
 
 ## Changes in 0.1.0
 
