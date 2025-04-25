@@ -1,0 +1,7 @@
+name: xce-ndvi
+channels:
+  - conda-forge
+dependencies:
+  - rioxarray
+  - libgdal-jp2openjpeg
+
