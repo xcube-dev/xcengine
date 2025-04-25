@@ -26,7 +26,7 @@ def write_stac(
         description="Root catalog",
         href=f"{stac_root}/catalog.json",
     )
-    for ds_name in datasets:
+    for ds_name, ds in datasets.items():
         asset_path = str(stac_root / "output" / (ds_name + ".zarr"))
         asset = pystac.Asset(
             roles=["data", "visual"],
@@ -38,6 +38,7 @@ def write_stac(
             # uses the similar "application/vnd+zarr" but RFC 6838 mandates
             # "." rather than "+".
             media_type="application/vnd.zarr",
+            title=ds.attrs.get("title", ds_name),
         )
         bb = namedtuple("Bounds", ["left", "bottom", "right", "top"])(
             0, -90, 360, 90
