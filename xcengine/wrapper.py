@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--batch", action="store_true")
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--from-saved", action="store_true")
+    parser.add_argument("--eoap", action="store_true")
     parser.add_argument("-v", "--verbose", action="count", default=0)
     args, _ = parser.parse_known_args()
     if args.verbose > 0:
@@ -83,7 +84,8 @@ def main():
         # The "finished" file is a flag to indicate to a runner when
         # processing is complete, though the xcetool runner doesn't yet use it.
         (output_path / "finished").touch()
-        util.write_stac(datasets, output_path)
+        if args.eoap:
+            util.write_stac(datasets, output_path)
 
     if args.server:
         xcube.util.plugin.init_plugins()

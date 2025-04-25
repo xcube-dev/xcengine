@@ -148,7 +148,7 @@ class ScriptCreator:
                         "python3",
                         "/home/mambauser/execute.py",
                     ],
-                    "arguments": ["--batch"],
+                    "arguments": ["--batch", "--eoap"],
                     # TODO: Handle stage-in and stage-out properly
                     "inputs": self.nb_params.get_cwl_commandline_inputs(),
                     "outputs": {

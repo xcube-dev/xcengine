@@ -27,10 +27,15 @@ def write_stac(
         href=f"{stac_root}/catalog.json",
     )
     for ds_name, ds in datasets.items():
-        asset_path = str(stac_root / "output" / (ds_name + ".zarr"))
+        zarr_name = (ds_name + ".zarr")
+        zarr_path = stac_root / "output" / zarr_name
+        asset_parent = stac_root / ds_name
+        asset_parent.mkdir(parents=True, exist_ok=True)
+        asset_path = asset_parent / zarr_name
+        zarr_path.rename(asset_path)
         asset = pystac.Asset(
             roles=["data", "visual"],
-            href=asset_path,
+            href=str(asset_path),
             # No official media type for Zarr yet, but "application/vnd.zarr"
             # https://github.com/radiantearth/stac-spec/issues/713 and listed in
             # https://humanbrainproject.github.io/openMINDS/v3/core/v4/data/contentType.html
