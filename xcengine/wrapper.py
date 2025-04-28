@@ -70,7 +70,6 @@ def main():
     saved_datasets = {}
 
     if args.batch:
-        # TODO: Implement EOAP-compliant stage-in and stage-out
         # EOAP doesn't require an "output" subdirectory (output can go anywhere
         # in the CWD) but it's used by xcetool's built-in runner.
         # Note that EOAP runners typically override the image-specified CWD.

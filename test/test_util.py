@@ -38,19 +38,22 @@ def test_clear_directory(tmp_path):
     assert os.listdir(tmp_path) == []
 
 
-def test_write_stac(tmp_path, dataset):
+@pytest.mark.parametrize("write_zarrs", [False, True])
+def test_write_stac(tmp_path, dataset, write_zarrs):
     datasets = {"ds1": dataset, "ds2": dataset}
+    if write_zarrs:
+        output_path = tmp_path / "output"
+        output_path.mkdir()
+        for ds_id, ds in datasets.items():
+            ds.to_zarr(output_path / (ds_id + ".zarr"))
+
     write_stac(datasets, tmp_path)
     catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
     items = set(catalog.get_items(recursive=True))
     assert {item.id for item in items} == datasets.keys()
     catalog.make_all_asset_hrefs_absolute()
     data_asset_hrefs = {
-        item.id: [
-            a.href  # (Path(item.self_href) / a.href).resolve(strict=False)
-            for a in item.assets.values()
-            if "data" in a.roles
-        ]
+        item.id: [a.href for a in item.assets.values() if "data" in a.roles]
         for item in items
     }
     assert data_asset_hrefs == {
