@@ -32,7 +32,13 @@ def write_stac(
         asset_parent = stac_root / ds_name
         asset_parent.mkdir(parents=True, exist_ok=True)
         asset_path = asset_parent / zarr_name
-        zarr_path.rename(asset_path)
+        if zarr_path.exists():
+            # If a Zarr for this asset is present in the output directory,
+            # move it into the corresponding STAC subdirectory. If not,
+            # we write the same STAC items with the same asset links anyway
+            # and assume that the caller will take care of actually writing
+            # the asset.
+            zarr_path.rename(asset_path)
         asset = pystac.Asset(
             roles=["data", "visual"],
             href=str(asset_path),

@@ -39,10 +39,11 @@ def test_clear_directory(tmp_path):
 
 
 def test_write_stac(tmp_path, dataset):
-    write_stac({"ds1": dataset, "ds2": dataset}, tmp_path)
+    datasets = {"ds1": dataset, "ds2": dataset}
+    write_stac(datasets, tmp_path)
     catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
     items = set(catalog.get_items(recursive=True))
-    assert {item.id for item in items} == {"ds1", "ds2"}
+    assert {item.id for item in items} == datasets.keys()
     catalog.make_all_asset_hrefs_absolute()
     data_asset_hrefs = {
         item.id: [
@@ -53,8 +54,8 @@ def test_write_stac(tmp_path, dataset):
         for item in items
     }
     assert data_asset_hrefs == {
-        ds: [
-            str(Path(tmp_path / "output" / f"{ds}.zarr").resolve(strict=False))
+        ds_id: [
+            str(Path(tmp_path / ds_id / f"{ds_id}.zarr").resolve(strict=False))
         ]
-        for ds in {"ds1", "ds2"}
+        for ds_id in datasets.keys()
     }
