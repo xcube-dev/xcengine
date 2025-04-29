@@ -76,3 +76,22 @@ def write_stac(
         catalog.add_item(item)
     catalog.make_all_asset_hrefs_relative()
     catalog.save(catalog_type=pystac.CatalogType.SELF_CONTAINED)
+
+
+def save_datasets(datasets, output_path: pathlib.Path, eoap_mode: bool) -> dict[str, xr.Dataset]:
+    saved_datasets = {}
+    # EOAP doesn't require an "output" subdirectory (output can go anywhere
+    # in the CWD) but it's used by xcetool's built-in runner.
+    # Note that EOAP runners typically override the image-specified CWD.
+    for ds_id, ds in datasets.items():
+        output_subpath = output_path / (ds_id if eoap_mode else "output")
+        output_subpath.mkdir(parents=True, exist_ok=True)
+        dataset_path = output_subpath / (ds_id + ".zarr")
+        saved_datasets[ds_id] = dataset_path
+        ds.to_zarr(dataset_path)
+    # The "finished" file is a flag to indicate to a runner when
+    # processing is complete, though the xcetool runner doesn't yet use it.
+    (output_path / "finished").touch()
+    if eoap_mode:
+        write_stac(datasets, output_path)
+    return saved_datasets
