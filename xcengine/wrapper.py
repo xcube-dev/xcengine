@@ -9,8 +9,7 @@ import logging
 import os
 import pathlib
 import sys
-
-from xcengine.util import save_datasets
+import xcengine.util
 
 print("CWD", os.getcwd())
 
@@ -71,7 +70,9 @@ def main():
     saved_datasets = {}
 
     if args.batch:
-        saved_datasets = save_datasets(datasets, pathlib.Path.cwd(), args.eoap)
+        saved_datasets = xcengine.util.save_datasets(
+            datasets, pathlib.Path.cwd(), args.eoap
+        )
 
     if args.server:
         xcube.util.plugin.init_plugins()
