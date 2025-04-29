@@ -27,7 +27,7 @@ def write_stac(
         href=f"{stac_root}/catalog.json",
     )
     for ds_name, ds in datasets.items():
-        zarr_name = (ds_name + ".zarr")
+        zarr_name = ds_name + ".zarr"
         zarr_path = stac_root / "output" / zarr_name
         asset_parent = stac_root / ds_name
         asset_parent.mkdir(parents=True, exist_ok=True)
@@ -78,7 +78,9 @@ def write_stac(
     catalog.save(catalog_type=pystac.CatalogType.SELF_CONTAINED)
 
 
-def save_datasets(datasets, output_path: pathlib.Path, eoap_mode: bool) -> dict[str, xr.Dataset]:
+def save_datasets(
+    datasets, output_path: pathlib.Path, eoap_mode: bool
+) -> dict[str, xr.Dataset]:
     saved_datasets = {}
     # EOAP doesn't require an "output" subdirectory (output can go anywhere
     # in the CWD) but it's used by xcetool's built-in runner.

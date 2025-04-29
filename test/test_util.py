@@ -69,8 +69,10 @@ def test_save_datasets(tmp_path, dataset, eoap_mode):
     datasets = {"ds1": dataset, "ds2": dataset}
     save_datasets(datasets, tmp_path, eoap_mode)
     for ds_id in datasets.keys():
-        assert (tmp_path / (ds_id if eoap_mode else "output") / (ds_id + ".zarr")).is_dir()
-    catalogue_path = (tmp_path / "catalog.json")
+        assert (
+            tmp_path / (ds_id if eoap_mode else "output") / (ds_id + ".zarr")
+        ).is_dir()
+    catalogue_path = tmp_path / "catalog.json"
     if eoap_mode:
         assert catalogue_path.is_file()
     else:
