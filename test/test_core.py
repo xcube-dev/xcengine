@@ -53,10 +53,13 @@ def test_runner_init_invalid_image_type():
         xcengine.core.ContainerRunner(666, pathlib.Path("/foo"))
 
 
-def test_runner_init_with_string():
+@patch("docker.from_env")
+@pytest.mark.parametrize("pass_client", [False, True])
+def test_runner_init_with_string(from_env_mock, pass_client):
     image_name = "foo"
     image_mock = Mock(docker.models.images.Image)
     client_mock = Mock(docker.client.DockerClient)
+    from_env_mock.return_value = client_mock
 
     def get_mock(name):
         assert name == image_name
@@ -64,7 +67,9 @@ def test_runner_init_with_string():
 
     client_mock.images.get = get_mock
     runner = xcengine.core.ContainerRunner(
-        image_name, pathlib.Path("/foo"), client=client_mock
+        image_name,
+        pathlib.Path("/foo"),
+        client=client_mock if pass_client else None,
     )
     assert image_mock == runner.image
 
