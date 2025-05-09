@@ -1,0 +1,4 @@
+site_name: xcengine
+site_url: https://xcube-dev.github.io/xcengine
+theme:
+  name: material
