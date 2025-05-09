@@ -1,5 +1,6 @@
-[![Unit tests](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml/badge.svg)](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml)
+[![tests](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml/badge.svg)](https://github.com/xcube-dev/xcengine/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/gh/xcube-dev/xcengine/graph/badge.svg?token=dTPaJB6nR3)](https://codecov.io/gh/xcube-dev/xcengine)
+[![docs](https://github.com/xcube-dev/xcengine/actions/workflows/publish-docs.yaml/badge.svg)](https://github.com/xcube-dev/xcengine/actions/workflows/publish-docs.yaml)
 
 # xcengine: turn Jupyter notebooks into Application Packages
 
@@ -10,6 +11,10 @@ parameterized, headlessly runnable forms:
 -   A Docker container image
 -   An OGC [Earth Observation Application
     Package](https://docs.ogc.org/bp/20-089r1.html)
+
+# Documentation
+
+Documentation is hosted at <https://xcube-dev.github.io/xcengine/>.
 
 # Defining parameters in a notebook
 
