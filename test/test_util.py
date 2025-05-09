@@ -5,7 +5,7 @@ import pystac
 import pytest
 import xarray as xr
 
-from xcengine.util import clear_directory, write_stac
+from xcengine.util import clear_directory, write_stac, save_datasets
 
 
 @pytest.fixture
@@ -38,23 +38,42 @@ def test_clear_directory(tmp_path):
     assert os.listdir(tmp_path) == []
 
 
-def test_write_stac(tmp_path, dataset):
-    write_stac({"ds1": dataset, "ds2": dataset}, tmp_path)
+@pytest.mark.parametrize("write_zarrs", [False, True])
+def test_write_stac(tmp_path, dataset, write_zarrs):
+    datasets = {"ds1": dataset, "ds2": dataset}
+    if write_zarrs:
+        output_path = tmp_path / "output"
+        output_path.mkdir()
+        for ds_id, ds in datasets.items():
+            ds.to_zarr(output_path / (ds_id + ".zarr"))
+
+    write_stac(datasets, tmp_path)
     catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
     items = set(catalog.get_items(recursive=True))
-    assert {item.id for item in items} == {"ds1", "ds2"}
+    assert {item.id for item in items} == datasets.keys()
     catalog.make_all_asset_hrefs_absolute()
     data_asset_hrefs = {
-        item.id: [
-            a.href  # (Path(item.self_href) / a.href).resolve(strict=False)
-            for a in item.assets.values()
-            if "data" in a.roles
-        ]
+        item.id: [a.href for a in item.assets.values() if "data" in a.roles]
         for item in items
     }
     assert data_asset_hrefs == {
-        ds: [
-            str(Path(tmp_path / "output" / f"{ds}.zarr").resolve(strict=False))
+        ds_id: [
+            str(Path(tmp_path / ds_id / f"{ds_id}.zarr").resolve(strict=False))
         ]
-        for ds in {"ds1", "ds2"}
+        for ds_id in datasets.keys()
     }
+
+
+@pytest.mark.parametrize("eoap_mode", [False, True])
+def test_save_datasets(tmp_path, dataset, eoap_mode):
+    datasets = {"ds1": dataset, "ds2": dataset}
+    save_datasets(datasets, tmp_path, eoap_mode)
+    for ds_id in datasets.keys():
+        assert (
+            tmp_path / (ds_id if eoap_mode else "output") / (ds_id + ".zarr")
+        ).is_dir()
+    catalogue_path = tmp_path / "catalog.json"
+    if eoap_mode:
+        assert catalogue_path.is_file()
+    else:
+        assert not catalogue_path.exists()

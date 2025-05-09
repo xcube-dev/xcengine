@@ -27,10 +27,21 @@ def write_stac(
         href=f"{stac_root}/catalog.json",
     )
     for ds_name, ds in datasets.items():
-        asset_path = str(stac_root / "output" / (ds_name + ".zarr"))
+        zarr_name = ds_name + ".zarr"
+        zarr_path = stac_root / "output" / zarr_name
+        asset_parent = stac_root / ds_name
+        asset_parent.mkdir(parents=True, exist_ok=True)
+        asset_path = asset_parent / zarr_name
+        if zarr_path.exists():
+            # If a Zarr for this asset is present in the output directory,
+            # move it into the corresponding STAC subdirectory. If not,
+            # we write the same STAC items with the same asset links anyway
+            # and assume that the caller will take care of actually writing
+            # the asset.
+            zarr_path.rename(asset_path)
         asset = pystac.Asset(
             roles=["data", "visual"],
-            href=asset_path,
+            href=str(asset_path),
             # No official media type for Zarr yet, but "application/vnd.zarr"
             # https://github.com/radiantearth/stac-spec/issues/713 and listed in
             # https://humanbrainproject.github.io/openMINDS/v3/core/v4/data/contentType.html
@@ -65,3 +76,24 @@ def write_stac(
         catalog.add_item(item)
     catalog.make_all_asset_hrefs_relative()
     catalog.save(catalog_type=pystac.CatalogType.SELF_CONTAINED)
+
+
+def save_datasets(
+    datasets, output_path: pathlib.Path, eoap_mode: bool
+) -> dict[str, xr.Dataset]:
+    saved_datasets = {}
+    # EOAP doesn't require an "output" subdirectory (output can go anywhere
+    # in the CWD) but it's used by xcetool's built-in runner.
+    # Note that EOAP runners typically override the image-specified CWD.
+    for ds_id, ds in datasets.items():
+        output_subpath = output_path / (ds_id if eoap_mode else "output")
+        output_subpath.mkdir(parents=True, exist_ok=True)
+        dataset_path = output_subpath / (ds_id + ".zarr")
+        saved_datasets[ds_id] = dataset_path
+        ds.to_zarr(dataset_path)
+    # The "finished" file is a flag to indicate to a runner when
+    # processing is complete, though the xcetool runner doesn't yet use it.
+    (output_path / "finished").touch()
+    if eoap_mode:
+        write_stac(datasets, output_path)
+    return saved_datasets

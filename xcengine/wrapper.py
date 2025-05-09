@@ -9,11 +9,11 @@ import logging
 import os
 import pathlib
 import sys
+import util
 
 print("CWD", os.getcwd())
 
 import parameters
-import util
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--batch", action="store_true")
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--from-saved", action="store_true")
+    parser.add_argument("--eoap", action="store_true")
     parser.add_argument("-v", "--verbose", action="count", default=0)
     args, _ = parser.parse_known_args()
     if args.verbose > 0:
@@ -69,21 +70,9 @@ def main():
     saved_datasets = {}
 
     if args.batch:
-        # TODO: Implement EOAP-compliant stage-in and stage-out
-        # EOAP doesn't require an "output" subdirectory (output can go anywhere
-        # in the CWD) but it's used by xcetool's built-in runner.
-        # Note that EOAP runners typically override the image-specified CWD.
-        output_path = pathlib.Path.cwd()
-        output_subpath = output_path / "output"
-        output_subpath.mkdir(parents=True, exist_ok=True)
-        for name, dataset in datasets.items():
-            dataset_path = output_subpath / (name + ".zarr")
-            saved_datasets[name] = dataset_path
-            dataset.to_zarr(dataset_path)
-        # The "finished" file is a flag to indicate to a runner when
-        # processing is complete, though the xcetool runner doesn't yet use it.
-        (output_path / "finished").touch()
-        util.write_stac(datasets, output_path)
+        saved_datasets = util.save_datasets(
+            datasets, pathlib.Path.cwd(), args.eoap
+        )
 
     if args.server:
         xcube.util.plugin.init_plugins()
