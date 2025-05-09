@@ -3,9 +3,8 @@ from unittest.mock import patch, Mock
 import pytest
 
 
-@patch("xcengine.util.save_datasets")
 @pytest.mark.parametrize("cli_args", [["--verbose"], ["--batch"]])
-def test_wrapper(save_datasets_mock, tmp_path, monkeypatch, cli_args):
+def test_wrapper(tmp_path, monkeypatch, cli_args):
     import xcengine
 
     with patch("sys.argv", ["wrapper.py"] + cli_args):
@@ -16,7 +15,8 @@ def test_wrapper(save_datasets_mock, tmp_path, monkeypatch, cli_args):
         os.environ["XC_USER_CODE_PATH"] = str(user_code_path)
         from xcengine import wrapper
 
-        xcengine.wrapper.main()
+        with patch("util.save_datasets", save_datasets_mock := Mock()):
+            xcengine.wrapper.main()
 
         assert save_datasets_mock.call_count == (
             1 if "--batch" in cli_args else 0

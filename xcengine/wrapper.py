@@ -9,7 +9,7 @@ import logging
 import os
 import pathlib
 import sys
-import xcengine.util
+import util
 
 print("CWD", os.getcwd())
 
@@ -70,7 +70,7 @@ def main():
     saved_datasets = {}
 
     if args.batch:
-        saved_datasets = xcengine.util.save_datasets(
+        saved_datasets = util.save_datasets(
             datasets, pathlib.Path.cwd(), args.eoap
         )
 
