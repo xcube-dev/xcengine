@@ -107,9 +107,9 @@ class ScriptCreator:
 
     def create_cwl(self, image_tag: str) -> dict[str, Any]:
         script_id = "xce_script"
-        output_id = "xce_output"
+        output_id = "results"
         return {
-            "cwlVersion": "v1.2",
+            "cwlVersion": "v1.0",
             "$namespaces": {"s": "https://schema.org/"},
             "s:softwareVersion": "1.0.0",
             "schemas": [
@@ -118,16 +118,16 @@ class ScriptCreator:
             "$graph": [
                 {
                     "class": "Workflow",
+                    "id": "xcengine_ap",
                     "label": "xcengine notebook",
                     "doc": "xcengine notebook",
-                    "id": "main",
                     "requirements": [],
                     "inputs": self.nb_params.get_cwl_workflow_inputs(),
                     "outputs": [
                         {
                             "id": "stac_catalog",
-                            "outputSource": [f"run_script/{output_id}"],
                             "type": "Directory",
+                            "outputSource": [f"run_script/{output_id}"],
                         }
                     ],
                     "steps": {
@@ -144,6 +144,9 @@ class ScriptCreator:
                     "requirements": {
                         "DockerRequirement": {"dockerPull": image_tag}
                     },
+                    "hints": {
+                        "DockerRequirement": {"dockerPull": image_tag}
+                    },
                     "baseCommand": [
                         "python3",
                         "/home/mambauser/execute.py",
@@ -153,8 +156,8 @@ class ScriptCreator:
                     "inputs": self.nb_params.get_cwl_commandline_inputs(),
                     "outputs": {
                         output_id: {
-                            "outputBinding": {"glob": "."},
                             "type": "Directory",
+                            "outputBinding": {"glob": "."},
                         }
                     },
                 },
