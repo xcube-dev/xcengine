@@ -101,10 +101,10 @@ class NotebookParameters:
     def get_cwl_workflow_input(self, var_name: str) -> dict[str, Any]:
         type_, default_ = self.params[var_name]
         return {
+            "label": var_name,
+            "doc": var_name,
             "type": self.cwl_type(type_),
             "default": default_,
-            "doc": var_name,
-            "label": var_name,
         }
 
     def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:

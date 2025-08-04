@@ -6,6 +6,7 @@
 * Ignore magic commands in input notebooks (#14)
 * Add NDVI sample notebook
 * Improve STAC output
+* Tweak CWL format (#24)
 
 ## Changes in 0.1.0
 
