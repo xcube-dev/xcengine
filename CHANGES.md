@@ -7,6 +7,7 @@
 * Add NDVI sample notebook
 * Improve STAC output
 * Tweak CWL format (#24)
+* Use micromamba entry point in Docker image (#26)
 
 ## Changes in 0.1.0
 
