@@ -148,7 +148,8 @@ class ScriptCreator:
                         "DockerRequirement": {"dockerPull": image_tag}
                     },
                     "baseCommand": [
-                        "python3",
+                        "/usr/local/bin/_entrypoint.sh",
+                        "python",
                         "/home/mambauser/execute.py",
                     ],
                     "arguments": ["--batch", "--eoap"],
@@ -280,7 +281,7 @@ class ImageBuilder:
         COPY parameters.yaml parameters.yaml
         COPY parameters.py parameters.py
         COPY util.py util.py
-        CMD python execute.py
+        ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "python", "/home/mambauser/execute.py"]
         """
         )
         with open(self.build_dir / "Dockerfile", "w") as fh:
