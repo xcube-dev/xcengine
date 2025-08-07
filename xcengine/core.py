@@ -36,10 +36,12 @@ logging.basicConfig(level=logging.INFO)
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
+    nb_path: pathlib.Path
     notebook: nbformat.NotebookNode
     nb_params: NotebookParameters = NotebookParameters({})
 
     def __init__(self, nb_path: pathlib.Path):
+        self.nb_path = nb_path
         with open(nb_path) as fh:
             self.notebook = nbformat.read(fh, as_version=4)
         self.process_params_cell()
@@ -121,7 +123,7 @@ class ScriptCreator:
             "$graph": [
                 {
                     "class": "Workflow",
-                    "id": "xcengine_ap",
+                    "id": self.nb_path.stem,
                     "label": "xcengine notebook",
                     "doc": "xcengine notebook",
                     "requirements": [],

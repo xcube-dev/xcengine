@@ -3,11 +3,14 @@ import json
 import pathlib
 import pytz
 from io import BufferedReader
+import yaml
+import cwltool.load_tool
 
 import pytest
 from unittest.mock import Mock
 
 import docker.models.images
+import schema_salad.exceptions
 
 import xcengine.core
 import xcengine.parameters
@@ -160,3 +163,35 @@ def test_script_creator_convert_notebook_to_script(tmp_path, clear):
     expected = {output_dir / f for f in filenames}
     assert set(output_dir.iterdir()) == expected
     # TODO test execution as well?
+
+
+def test_script_creator_cwl(tmp_path):
+    nb_path = pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
+    script_creator = ScriptCreator(
+        nb_path
+    )
+    image_tag = "foo"
+    cwl_path = tmp_path / "test.cwl"
+    cwl = script_creator.create_cwl(image_tag)
+    with open(cwl_path, "w") as fh:
+        yaml.dump(cwl, fh)
+    loading_context, workflowobj, uri = cwltool.load_tool.fetch_document(
+        str(cwl_path)
+    )
+    try:
+        cwltool.load_tool.resolve_and_validate_document(
+            loading_context, workflowobj, uri
+        )
+    except schema_salad.exceptions.ValidationException:
+        pytest.fail("CWL validation failed")
+    graph = cwl["$graph"]
+    cli_tools = [n for n in graph if n["class"] == "CommandLineTool"]
+    assert len(cli_tools) == 1
+    cli_tool = cli_tools[0]
+    assert cli_tool["requirements"]["DockerRequirement"]["dockerPull"] == image_tag
+    assert cli_tool["hints"]["DockerRequirement"]["dockerPull"] == image_tag
+    workflows = [n for n in graph if n["class"] == "Workflow"]
+    assert len(workflows) == 1
+    workflow = workflows[0]
+    assert workflow["id"] == nb_path.stem
+
