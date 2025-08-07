@@ -123,7 +123,9 @@ class ScriptCreator:
             "$graph": [
                 {
                     "class": "Workflow",
-                    "id": self.nb_path.stem,
+                    "id": self.nb_params.config.get(
+                        "workflow_id", self.nb_path.stem
+                    ),
                     "label": "xcengine notebook",
                     "doc": "xcengine notebook",
                     "requirements": [],
@@ -149,9 +151,7 @@ class ScriptCreator:
                     "requirements": {
                         "DockerRequirement": {"dockerPull": image_tag}
                     },
-                    "hints": {
-                        "DockerRequirement": {"dockerPull": image_tag}
-                    },
+                    "hints": {"DockerRequirement": {"dockerPull": image_tag}},
                     "baseCommand": [
                         "/usr/local/bin/_entrypoint.sh",
                         "python",

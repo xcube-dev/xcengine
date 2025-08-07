@@ -165,11 +165,10 @@ def test_script_creator_convert_notebook_to_script(tmp_path, clear):
     # TODO test execution as well?
 
 
-def test_script_creator_cwl(tmp_path):
-    nb_path = pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
-    script_creator = ScriptCreator(
-        nb_path
-    )
+@pytest.mark.parametrize("nb_name", ["noparamtest", "paramtest"])
+def test_script_creator_cwl(tmp_path, nb_name):
+    nb_path = pathlib.Path(__file__).parent / "data" / f"{nb_name}.ipynb"
+    script_creator = ScriptCreator(nb_path)
     image_tag = "foo"
     cwl_path = tmp_path / "test.cwl"
     cwl = script_creator.create_cwl(image_tag)
@@ -188,10 +187,14 @@ def test_script_creator_cwl(tmp_path):
     cli_tools = [n for n in graph if n["class"] == "CommandLineTool"]
     assert len(cli_tools) == 1
     cli_tool = cli_tools[0]
-    assert cli_tool["requirements"]["DockerRequirement"]["dockerPull"] == image_tag
+    assert (
+        cli_tool["requirements"]["DockerRequirement"]["dockerPull"]
+        == image_tag
+    )
     assert cli_tool["hints"]["DockerRequirement"]["dockerPull"] == image_tag
     workflows = [n for n in graph if n["class"] == "Workflow"]
     assert len(workflows) == 1
     workflow = workflows[0]
-    assert workflow["id"] == nb_path.stem
-
+    assert workflow["id"] == (
+        nb_path.stem if nb_name == "noparamtest" else "my-workflow"
+    )

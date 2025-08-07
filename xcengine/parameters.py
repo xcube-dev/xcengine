@@ -22,9 +22,9 @@ class NotebookParameters:
     config: dict[str, Any]
 
     def __init__(
-            self,
-            params: dict[str, tuple[type, Any]],
-            config: dict[str, Any] = None
+        self,
+        params: dict[str, tuple[type, Any]],
+        config: dict[str, Any] = None,
     ):
         self.params = params
         self.config = {} if config is None else config
@@ -86,7 +86,11 @@ class NotebookParameters:
     def make_param_tuple(cls, key: str, value: Any) -> tuple[type, Any]:
         return (
             t := type(value),
-            value if t in {int, float, str, bool} or key == cls.config_var_name else None,
+            (
+                value
+                if t in {int, float, str, bool} or key == cls.config_var_name
+                else None
+            ),
         )
 
     def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:

@@ -150,11 +150,18 @@ def build(
             )
             image = image_builder.build()
     if eoap:
+
         class IndentDumper(yaml.Dumper):
             def increase_indent(self, flow=False, indentless=False):
                 return super(IndentDumper, self).increase_indent(flow, False)
 
-        eoap.write_text(yaml.dump(image_builder.create_cwl(), sort_keys=False, Dumper=IndentDumper))
+        eoap.write_text(
+            yaml.dump(
+                image_builder.create_cwl(),
+                sort_keys=False,
+                Dumper=IndentDumper,
+            )
+        )
     print(f"Built image with tags {image.tags}")
 
 
