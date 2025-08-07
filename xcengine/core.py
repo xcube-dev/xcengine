@@ -36,10 +36,12 @@ logging.basicConfig(level=logging.INFO)
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
+    nb_path: pathlib.Path
     notebook: nbformat.NotebookNode
     nb_params: NotebookParameters = NotebookParameters({})
 
     def __init__(self, nb_path: pathlib.Path):
+        self.nb_path = nb_path
         with open(nb_path) as fh:
             self.notebook = nbformat.read(fh, as_version=4)
         self.process_params_cell()
@@ -75,13 +77,16 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
+            # Collect the code from the cells preceding the parameter cell
+            # (because it might be a necessary preliminary to executing the
+            # parameter cell itself).
             setup_node = nbformat.from_dict(self.notebook)
             setup_node.cells = setup_node.cells[:params_cell_index]
             exporter = nbconvert.PythonExporter()
             (setup_code, _) = exporter.from_notebook_node(setup_node)
-            # Mock out the get_ipython function in case there are any
-            # IPython magic commands in the notebook. This effectively
-            # turns them into no-ops
+            # Mock out the get_ipython function in case there are any IPython
+            # magic commands in the notebook. This effectively turns them into
+            # no-ops.
             setup_code = (
                 "import unittest.mock\n"
                 "get_ipython = unittest.mock.MagicMock\n" + setup_code
@@ -118,7 +123,9 @@ class ScriptCreator:
             "$graph": [
                 {
                     "class": "Workflow",
-                    "id": "xcengine_ap",
+                    "id": self.nb_params.config.get(
+                        "workflow_id", self.nb_path.stem
+                    ),
                     "label": "xcengine notebook",
                     "doc": "xcengine notebook",
                     "requirements": [],
@@ -144,9 +151,7 @@ class ScriptCreator:
                     "requirements": {
                         "DockerRequirement": {"dockerPull": image_tag}
                     },
-                    "hints": {
-                        "DockerRequirement": {"dockerPull": image_tag}
-                    },
+                    "hints": {"DockerRequirement": {"dockerPull": image_tag}},
                     "baseCommand": [
                         "/usr/local/bin/_entrypoint.sh",
                         "python",

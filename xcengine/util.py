@@ -21,10 +21,14 @@ def clear_directory(directory: pathlib.Path) -> None:
 def write_stac(
     datasets: dict[str, xr.Dataset], stac_root: pathlib.Path
 ) -> None:
+    catalog_path = stac_root / "catalog.json"
+    if catalog_path.exists():
+        # Assume that the user code generated its own stage-out data
+        return
     catalog = pystac.Catalog(
         id="catalog",
         description="Root catalog",
-        href=f"{stac_root}/catalog.json",
+        href=f"{catalog_path}",
     )
     for ds_name, ds in datasets.items():
         zarr_name = ds_name + ".zarr"

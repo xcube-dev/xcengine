@@ -15,6 +15,7 @@ dependencies:
   - xarray
   - xcube  # See note below
   # test dependencies
+  - cwltool
   - pytest
   - pytest-cov
 

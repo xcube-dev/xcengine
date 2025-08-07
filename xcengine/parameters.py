@@ -7,6 +7,7 @@ from typing import Any
 import pystac
 import xarray as xr
 import yaml
+from typing_extensions import ClassVar
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -17,12 +18,19 @@ class NotebookParameters:
     params: dict[str, tuple[type, Any]]
     cwl_params: dict[str, tuple[type | str, Any]]
     dataset_inputs: list[str]
+    config_var_name: ClassVar[str] = "xcengine_config"
+    config: dict[str, Any]
 
-    def __init__(self, params: dict[str, tuple[type, Any]]):
+    def __init__(
+        self,
+        params: dict[str, tuple[type, Any]],
+        config: dict[str, Any] = None,
+    ):
         self.params = params
+        self.config = {} if config is None else config
         self.make_cwl_params()
 
-    def make_cwl_params(self):
+    def make_cwl_params(self) -> None:
         self.dataset_inputs = []
         self.cwl_params = {}
         for param_name in self.params:
@@ -38,11 +46,9 @@ class NotebookParameters:
     def from_code(
         cls, code: str, setup_code: str | None = None
     ) -> "NotebookParameters":
-        # TODO run whole notebook up to params cell, not just the params cell!
-        # (Because it might use imports etc. from earlier in the notebook.)
-        # This will need some tweaking of the parameter extraction -- see
-        # comment therein.
-        return cls(cls.extract_variables(code, setup_code))
+        variables = cls.extract_variables(code, setup_code)
+        config = variables.pop(cls.config_var_name, (None, None))
+        return cls(variables, config[1])
 
     @classmethod
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
@@ -74,13 +80,17 @@ class NotebookParameters:
             old_locals = locals_.copy()
         exec(code, globals(), locals_)
         new_vars = locals_.keys() - old_locals.keys()
-        return {k: cls.make_param_tuple(locals_[k]) for k in new_vars}
+        return {k: cls.make_param_tuple(k, locals_[k]) for k in new_vars}
 
-    @staticmethod
-    def make_param_tuple(value: Any) -> tuple[type, Any]:
+    @classmethod
+    def make_param_tuple(cls, key: str, value: Any) -> tuple[type, Any]:
         return (
             t := type(value),
-            value if t in {int, float, str, bool} else None,
+            (
+                value
+                if t in {int, float, str, bool} or key == cls.config_var_name
+                else None
+            ),
         )
 
     def get_cwl_workflow_inputs(self) -> dict[str, dict[str, Any]]:
