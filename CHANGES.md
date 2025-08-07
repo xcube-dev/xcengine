@@ -8,6 +8,8 @@
 * Improve STAC output
 * Tweak CWL format (#24)
 * Use micromamba entry point in Docker image (#26)
+* Allow setting of CWL workflow ID (#29)
+* Add in-notebook configuration interface (#30)
 
 ## Changes in 0.1.0
 
