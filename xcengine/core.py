@@ -75,13 +75,16 @@ class ScriptCreator:
                 params_cell_index = i
                 break
         if params_cell_index is not None:
+            # Collect the code from the cells preceding the parameter cell
+            # (because it might be a necessary preliminary to executing the
+            # parameter cell itself).
             setup_node = nbformat.from_dict(self.notebook)
             setup_node.cells = setup_node.cells[:params_cell_index]
             exporter = nbconvert.PythonExporter()
             (setup_code, _) = exporter.from_notebook_node(setup_node)
-            # Mock out the get_ipython function in case there are any
-            # IPython magic commands in the notebook. This effectively
-            # turns them into no-ops
+            # Mock out the get_ipython function in case there are any IPython
+            # magic commands in the notebook. This effectively turns them into
+            # no-ops.
             setup_code = (
                 "import unittest.mock\n"
                 "get_ipython = unittest.mock.MagicMock\n" + setup_code
