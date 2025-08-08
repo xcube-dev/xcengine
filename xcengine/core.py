@@ -16,7 +16,7 @@ import time
 import uuid
 import datetime
 from collections.abc import Mapping, Generator, Iterable
-from typing import Any
+from typing import Any, ClassVar
 
 import docker
 from docker.errors import BuildError
@@ -178,7 +178,7 @@ class ImageBuilder:
     runs a container initialized from that image.
     """
 
-    tag_format = "xcengine:%Y.%m.%d.%H.%M.%S"
+    tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
 
     def __init__(
         self,
@@ -188,16 +188,39 @@ class ImageBuilder:
         tag: str | None,
     ):
         self.notebook = notebook
-        self.environment = environment
         self.build_dir = build_dir
+        self.script_creator = ScriptCreator(self.notebook)
+        nb_config = self.script_creator.nb_params.config
         if tag is None:
-            self.tag = datetime.datetime.now(datetime.UTC).strftime(
-                self.tag_format
-            )
-            LOGGER.info(f"No tag specified; using {self.tag}")
+            LOGGER.info("No tag specified; looking for one in the notebook.")
+            nb_tag = nb_config.get("container_image_tag", None)
+            if nb_tag is not None:
+                LOGGER.info(f"Using tag {nb_tag} from notebook.")
+                self.tag = nb_tag
+            else:
+                timestamp = datetime.datetime.now(datetime.UTC).strftime(
+                    self.tag_format
+                )
+                self.tag = f"{notebook.stem}:{timestamp}"
+                LOGGER.info(f"No tag in notebook; using {self.tag}")
         else:
             self.tag = tag
-        self.script_creator = ScriptCreator(self.notebook)
+
+        if environment is None:
+            LOGGER.info(
+                "No environment file specified; "
+                "looking for one in the notebook."
+            )
+            nb_env = nb_config.get("environment_file", None)
+            if nb_env is not None:
+                LOGGER.info(
+                    f"Using environment file {nb_tag} as specified in notebook."
+                )
+                self.environment = notebook.parent / nb_env
+            else:
+                LOGGER.info(f"No environment specified in notebook.")
+        else:
+            self.environment = environment
 
     def build(self) -> Image:
         self.script_creator.convert_notebook_to_script(self.build_dir)
