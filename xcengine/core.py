@@ -214,7 +214,7 @@ class ImageBuilder:
             nb_env = nb_config.get("environment_file", None)
             if nb_env is not None:
                 LOGGER.info(
-                    f"Using environment file {nb_tag} as specified in notebook."
+                    f"Using environment file {nb_env} as specified in notebook."
                 )
                 self.environment = notebook.parent / nb_env
             else:
