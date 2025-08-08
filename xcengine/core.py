@@ -183,7 +183,7 @@ class ImageBuilder:
     def __init__(
         self,
         notebook: pathlib.Path,
-        environment: pathlib.Path,
+        environment: pathlib.Path | None,
         build_dir: pathlib.Path,
         tag: str | None,
     ):
