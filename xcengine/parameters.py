@@ -7,7 +7,7 @@ from typing import Any
 import pystac
 import xarray as xr
 import yaml
-from typing_extensions import ClassVar
+from typing import ClassVar
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)

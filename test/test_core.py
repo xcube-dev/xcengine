@@ -42,7 +42,9 @@ def test_image_builder_init(init_mock, tmp_path, tag):
         assert abs(
             datetime.datetime.now(datetime.UTC)
             - pytz.utc.localize(
-                datetime.datetime.strptime(ib.tag, ImageBuilder.tag_format)
+                datetime.datetime.strptime(
+                    ib.tag, nb_path.stem + ":" + ImageBuilder.tag_format
+                )
             )
         ) < datetime.timedelta(seconds=10)
     else:
@@ -198,3 +200,19 @@ def test_script_creator_cwl(tmp_path, nb_name):
     assert workflow["id"] == (
         nb_path.stem if nb_name == "noparamtest" else "my-workflow"
     )
+
+
+def test_script_creator_notebook_config():
+    nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    script_creator = ScriptCreator(nb_path)
+    config = script_creator.nb_params.config
+    assert config["environment_file"] == "my-environment.yml"
+    assert config["container_image_tag"] == "my-tag"
+
+
+def test_image_builder_notebook_config(tmp_path):
+    nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    image_builder = ImageBuilder(nb_path, None, tmp_path, None)
+    config = image_builder.script_creator.nb_params.config
+    assert config["environment_file"] == "my-environment.yml"
+    assert config["container_image_tag"] == "my-tag"
