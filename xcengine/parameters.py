@@ -80,7 +80,10 @@ class NotebookParameters:
             old_locals = locals_.copy()
         exec(code, globals(), locals_)
         new_vars = locals_.keys() - old_locals.keys()
-        return {k: cls.make_param_tuple(k, locals_[k]) for k in new_vars}
+        new_var_dict = {
+            k: cls.make_param_tuple(k, locals_[k]) for k in new_vars
+        }
+        return dict(sorted(new_var_dict.items()))
 
     @classmethod
     def make_param_tuple(cls, key: str, value: Any) -> tuple[type, Any]:
