@@ -5,11 +5,13 @@
 # https://opensource.org/licenses/MIT.
 
 
+import json
 import logging
 import os
 import pathlib
 import sys
 import util
+
 
 print("CWD", os.getcwd())
 
@@ -45,6 +47,7 @@ from xcube.server.server import Server
 from xcube.server.framework import get_framework_class
 import xcube.util.plugin
 import xcube.core.new
+import xcube.webapi.viewer
 
 
 def main():
@@ -55,6 +58,9 @@ def main():
     parser.add_argument("--server", action="store_true")
     parser.add_argument("--from-saved", action="store_true")
     parser.add_argument("--eoap", action="store_true")
+    parser.add_argument(
+        "--xcube-viewer-api-url", type=str, default="http://localhost:8080"
+    )
     parser.add_argument("-v", "--verbose", action="count", default=0)
     args, _ = parser.parse_known_args()
     if args.verbose > 0:
@@ -77,15 +83,31 @@ def main():
     if args.server:
         xcube.util.plugin.init_plugins()
         server = Server(framework=get_framework_class("tornado")(), config={})
-        context = server.ctx.get_api_ctx("datasets")
+        dataset_context = server.ctx.get_api_ctx("datasets")
         for name in datasets:
             dataset = (
                 xr.open_zarr(saved_datasets[name])
                 if args.batch and args.from_saved
                 else datasets[name]
             )
-            context.add_dataset(dataset, name, style="bar")
+            dataset_context.add_dataset(dataset, name, style="bar")
             LOGGER.info("Added " + name)
+        with open(
+            pathlib.Path(xcube.webapi.viewer.__file__).parent
+            / "dist"
+            / "images"
+            / "logo.png",
+            "rb",
+        ) as fh:
+            png = fh.read()
+
+        viewer_context = server.ctx.get_api_ctx("viewer")
+        viewer_context.config_items = {
+            "config.json": json.dumps(
+                {"server": {"url": args.xcube_viewer_api_url}, "branding": {}}
+            ),
+            "images/logo.png": png,
+        }
         LOGGER.info(f"Starting server on port {server.ctx.config['port']}...")
         server.start()
 
