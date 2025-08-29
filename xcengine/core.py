@@ -370,7 +370,15 @@ class ContainerRunner:
         command = (
             ["python", "execute.py"]
             + (["--batch"] if run_batch else [])
-            + (["--server"] if host_port is not None else [])
+            + (
+                [
+                    "--server",
+                    "--xcube-viewer-api-url",
+                    f"http://localhost:{host_port}",
+                ]
+                if host_port is not None
+                else []
+            )
             + (["--from-saved"] if from_saved else [])
         )
         run_args = dict(

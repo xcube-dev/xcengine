@@ -12,6 +12,8 @@
 * Support in-notebook configuration of workflow ID, environment file,
   and container image tag (#30, #33)
 * Support writing of stage-out STAC by notebook (#32)
+* Make viewer work on non-default ports (#21)
+* Improve dynamic example notebook
 
 ## Changes in 0.1.0
 
