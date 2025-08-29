@@ -92,21 +92,19 @@ def main():
             )
             dataset_context.add_dataset(dataset, name, style="bar")
             LOGGER.info("Added " + name)
-        with open(
+        logo_data = (
             pathlib.Path(xcube.webapi.viewer.__file__).parent
             / "dist"
             / "images"
-            / "logo.png",
-            "rb",
-        ) as fh:
-            png = fh.read()
+            / "logo.png"
+        ).read_bytes()
 
         viewer_context = server.ctx.get_api_ctx("viewer")
         viewer_context.config_items = {
             "config.json": json.dumps(
                 {"server": {"url": args.xcube_viewer_api_url}, "branding": {}}
             ),
-            "images/logo.png": png,
+            "images/logo.png": logo_data,
         }
         LOGGER.info(f"Starting server on port {server.ctx.config['port']}...")
         server.start()
