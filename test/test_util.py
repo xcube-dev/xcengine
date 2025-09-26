@@ -38,14 +38,15 @@ def test_clear_directory(tmp_path):
     assert os.listdir(tmp_path) == []
 
 
-@pytest.mark.parametrize("write_zarrs", [False, True])
-def test_write_stac(tmp_path, dataset, write_zarrs):
-    datasets = {"ds1": dataset, "ds2": dataset}
-    if write_zarrs:
+@pytest.mark.parametrize("write_datasets", [False, True])
+def test_write_stac(tmp_path, dataset, write_datasets):
+    datasets = {"ds1": dataset, "ds2": dataset.copy()}
+    datasets["ds2"].attrs["xcengine_output_format"] = "netcdf"
+    if write_datasets:
         output_path = tmp_path / "output"
         output_path.mkdir()
-        for ds_id, ds in datasets.items():
-            ds.to_zarr(output_path / (ds_id + ".zarr"))
+        datasets["ds1"].to_zarr(output_path / ("ds1.zarr"))
+        datasets["ds2"].to_netcdf(output_path / ("ds2.nc"))
 
     write_stac(datasets, tmp_path)
     catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
@@ -57,21 +58,27 @@ def test_write_stac(tmp_path, dataset, write_zarrs):
         for item in items
     }
     assert data_asset_hrefs == {
-        ds_id: [
-            str(Path(tmp_path / ds_id / f"{ds_id}.zarr").resolve(strict=False))
-        ]
-        for ds_id in datasets.keys()
+        "ds1": [str((tmp_path / "ds1" / "ds1.zarr").resolve(strict=False))],
+        "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
     }
 
 
 @pytest.mark.parametrize("eoap_mode", [False, True])
-def test_save_datasets(tmp_path, dataset, eoap_mode):
-    datasets = {"ds1": dataset, "ds2": dataset}
+@pytest.mark.parametrize("ds2_format", [None, "zarr", "netcdf"])
+def test_save_datasets(tmp_path, dataset, eoap_mode, ds2_format):
+    datasets = {"ds1": dataset, "ds2": dataset.copy()}
+    if ds2_format is not None:
+        datasets["ds2"].attrs["xcengine_output_format"] = ds2_format
     save_datasets(datasets, tmp_path, eoap_mode)
-    for ds_id in datasets.keys():
-        assert (
-            tmp_path / (ds_id if eoap_mode else "output") / (ds_id + ".zarr")
-        ).is_dir()
+    def outdir(ds_id):
+        return tmp_path / (ds_id if eoap_mode else "output")
+    assert (outdir("ds1") / "ds1.zarr").is_dir()
+    ds2_suffix = "nc" if ds2_format == "netcdf" else "zarr"
+    ds2_path =  outdir("ds2") / f"ds2.{ds2_suffix}"
+    if ds2_format == "netcdf":
+        assert ds2_path.is_file()
+    else:
+        assert ds2_path.is_dir()
     catalogue_path = tmp_path / "catalog.json"
     if eoap_mode:
         assert catalogue_path.is_file()
