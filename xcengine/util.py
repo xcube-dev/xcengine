@@ -31,18 +31,20 @@ def write_stac(
         href=f"{catalog_path}",
     )
     for ds_name, ds in datasets.items():
-        zarr_name = ds_name + ".zarr"
-        zarr_path = stac_root / "output" / zarr_name
+        output_format = ds.attrs.get("xcengine_output_format", "zarr")
+        suffix = "nc" if output_format == "netcdf" else "zarr"
+        output_name = f"{ds_name}.{suffix}"
+        output_path = stac_root / "output" / output_name
         asset_parent = stac_root / ds_name
         asset_parent.mkdir(parents=True, exist_ok=True)
-        asset_path = asset_parent / zarr_name
-        if zarr_path.exists():
+        asset_path = asset_parent / output_name
+        if output_path.exists():
             # If a Zarr for this asset is present in the output directory,
             # move it into the corresponding STAC subdirectory. If not,
             # we write the same STAC items with the same asset links anyway
             # and assume that the caller will take care of actually writing
             # the asset.
-            zarr_path.rename(asset_path)
+            output_path.rename(asset_path)
         asset = pystac.Asset(
             roles=["data", "visual"],
             href=str(asset_path),
@@ -52,7 +54,7 @@ def write_stac(
             # https://planetarycomputer.microsoft.com/api/stac/v1/collections/terraclimate
             # uses the similar "application/vnd+zarr" but RFC 6838 mandates
             # "." rather than "+".
-            media_type="application/vnd.zarr",
+            media_type="application/x-netcdf" if output_format == "netcdf" else "application/vnd.zarr",
             title=ds.attrs.get("title", ds_name),
         )
         bb = namedtuple("Bounds", ["left", "bottom", "right", "top"])(
@@ -92,9 +94,14 @@ def save_datasets(
     for ds_id, ds in datasets.items():
         output_subpath = output_path / (ds_id if eoap_mode else "output")
         output_subpath.mkdir(parents=True, exist_ok=True)
-        dataset_path = output_subpath / (ds_id + ".zarr")
+        output_format = ds.attrs.get("xcengine_output_format", "zarr")
+        suffix = "nc" if output_format == "netcdf" else "zarr"
+        dataset_path = output_subpath / f"{ds_id}.{suffix}"
         saved_datasets[ds_id] = dataset_path
-        ds.to_zarr(dataset_path)
+        if output_format == "netcdf":
+            ds.to_netcdf(dataset_path)
+        else:
+            ds.to_zarr(dataset_path)
     # The "finished" file is a flag to indicate to a runner when
     # processing is complete, though the xcetool runner doesn't yet use it.
     (output_path / "finished").touch()

@@ -33,6 +33,18 @@ parameters cell and make them available as command-line parameters for the
 output script and container, and as workflow parameters for the application
 package.
 
+# Customizing output formats
+
+An xcengine-generated script or image can automatically write all
+`xarray.Dataset` objects from the notebook code to disk, for example to be
+staged out as EO Application Package outputs. By default, Zarr format is
+used, but this can be changed to NetCDF on a per-dataset basis by applying
+an attribute:
+
+```python
+my_dataset.attrs["xcengine_output_format"] = "netcdf"
+```
+
 # xcetool usage
 
 xcengine provides a command-line tool called `xcetool`, which has several

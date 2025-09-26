@@ -14,6 +14,7 @@
 * Support writing of stage-out STAC by notebook (#32)
 * Make viewer work on non-default ports (#21)
 * Improve dynamic example notebook
+* Support NetCDF output (#28)
 
 ## Changes in 0.1.0
 
