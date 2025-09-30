@@ -5,6 +5,8 @@ conda-forge channel.
 
 ## Installing from conda-forge
 
-
+TODO
 
 ## Installing directly from the GitHub repository
+
+TODO

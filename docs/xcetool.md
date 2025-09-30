@@ -19,3 +19,13 @@ variables and their types can be defined by tagging a notebook cell
 datasets are automatically extracted from the notebook’s environment.
 Some user configuration is unavoidable, but xcengine automates much of the
 boilerplate required to create an EOAP.
+
+TODO
+
+# Publishing your container image
+
+TODO
+
+# Deploying your application package
+
+TODO
