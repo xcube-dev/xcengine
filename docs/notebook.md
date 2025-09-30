@@ -25,6 +25,8 @@ You can define as many parameters as you like in the property cell. The
 values you assign to them will be used as the default values for these
 parameters when xcengine generates the Application Package.
 
+This tagging convention is similar to the one used by [papermill](https://papermill.readthedocs.io/).
+
 ## Configuring xcengine
 
 As well as parameters, the parameters cell can contain an **xcengine
