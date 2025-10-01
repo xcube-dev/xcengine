@@ -1,25 +1,29 @@
 # xcengine
 
-xcube tools for compute engines
+xcengine turns [Python Jupyter notebooks](https://jupyter.org/) into:
 
-## Overview
+- OGC [Earth Observation Application
+  Packages](https://docs.ogc.org/bp/20-089r1.html)
+- Run-anywhere Docker images that bundle datasets with an
+  [xcube](https://xcube.readthedocs.io/en/latest/) server/viewer deployment
+  for easy interfacing and visualization
 
-xcengine provides a command `xcetool` which converts a Jupyter Python notebook
-to a compute engine. A compute engine consists of:
+Earth Observation Application Packages can be complex to implement correctly.
+The process can't be completely automated, but xcengine tries to simplify it
+as much as possible for Jupyter Notebook authors using code analysis and
+sensible defaults.
 
-- A docker container image packaging the notebook code, a Python environment,
-  and an [xcube](https://xcube.readthedocs.io/) server component, letting
-  the notebook results be served over multiple supported APIs and explored
-  in the interactive xcube viewer.
-- An accompanying CWL file defining an OGC
-  [Earth Observation Application Package](docs.ogc.org/bp/20-089r1.html) using
-  the container image. This lets your notebook code run as part of a processing
-  workflow on any EOAP platform.
+This documentation provides instructions for installing and using xcengine and
+links to further resources.
 
-In the conversion process, xcengine tries to maximize convenience for the user
-by requiring as little extra configuration and input as possible. Input
-variables and their types can be defined by tagging a notebook cell
-(similarly to [papermill](https://papermill.readthedocs.io/)), and output
-datasets are automatically extracted from the notebook’s environment.
-Some user configuration is unavoidable, but xcengine automates much of the
-boilerplate required to create an EOAP.
+1. [Introduction](intro.md)
+2. [Installing xcengine](installing.md)
+3. [Making a Jupyter notebook xcengine-compatible](notebook.md)
+4. [Running `xcetool`](xcetool.md)
+5. [Testing and running Application Packages](testing.md)
+6. [Further documentation and resources](resources.md)
+
+xcengine is developed as part of the [Open Earth Monitor
+Cyberinfrastructure](https://earthmonitor.org/) project, which has received
+funding from the European Union's Horizon Europe research and innovation
+programme under grant agreement No. 101059548.
