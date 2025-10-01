@@ -15,9 +15,9 @@ cell in a notebook, and it is strongly advised that the parameters cell appear
 **as early as possible** in the notebook.
 
 You turn a normal code cell into a parameters cell by adding a tag called
-**parameters** to it in the Jupyter Lab using the Property Inspector.
-(The Property Inspector can be opened by clicking the gear icon at the top
-right of the Jupyter Lab window.)
+**parameters** to it in Jupyter Lab using the Property Inspector. (The Property
+Inspector can be opened by clicking the gear icon at the top right of the Jupyter
+Lab window.)
 
 ![Property inspector](images/property-inspector.png)
 
