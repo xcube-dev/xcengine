@@ -64,3 +64,10 @@ additionally produce a Common Workflow Language (CWL) file defining an OGC
 ## `xcetool image run`
 
 Run a Docker container using an image converted from a Jupyter notebook.
+
+
+# Acknowledgements
+
+xcengine was developed as part of the Open-Earth-Monitor Cyberinfrastructure
+project, which has received funding from the European Union's Horizon Europe
+research and innovation programme under grant agreement No. 101059548.
