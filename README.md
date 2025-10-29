@@ -65,7 +65,6 @@ additionally produce a Common Workflow Language (CWL) file defining an OGC
 
 Run a Docker container using an image converted from a Jupyter notebook.
 
-
 # Acknowledgements
 
 xcengine was developed as part of the Open-Earth-Monitor Cyberinfrastructure

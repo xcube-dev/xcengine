@@ -62,7 +62,7 @@ of `xarray.DataSet` which is in scope when the notebook's code has finished
 executing. If you're created some datasets which you *don't* wish to be
 written, you can use the Python
 [`del` statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
-to delete them at the end of the notebook to remove them e.g.
+to delete them at the end of the notebook to remove them, e.g.
 
 ```python
 del my_temporary_dataset
