@@ -1,4 +1,4 @@
-## Changes in 0.1.1 (in development)
+## Changes in 0.1.1
 
 * Improve automated parameter extraction (#9)
 * Handle notebooks without parameters (#11)
