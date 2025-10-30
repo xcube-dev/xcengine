@@ -54,10 +54,9 @@ xcetool = "xcengine.cli:cli"
 
 [project.optional-dependencies]
 dev = [
+  "cwltool",
   "pytest",
-  "pytest-cov",
-  "black",
-  "flake8"
+  "pytest-cov"
 ]
 doc = [
   "mkdocs",
@@ -67,7 +66,7 @@ doc = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/xcube-dev/xcengine/blob/main/README.md"
+Documentation = "https://xcube-dev.github.io/xcengine/"
 Issues = "https://github.com/xcube-dev/xcengine/issues"
 Changelog = "https://github.com/xcube-dev/xcengine/blob/main/CHANGES.md"
 Repository = "https://github.com/xcube-dev/xcengine"
