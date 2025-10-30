@@ -1,3 +1,5 @@
+## Changes in 0.1.2 (in development)
+
 ## Changes in 0.1.1
 
 * Improve automated parameter extraction (#9)
