@@ -32,7 +32,6 @@ from xcengine.parameters import NotebookParameters
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
@@ -208,8 +207,7 @@ class ImageBuilder:
 
         if environment is None:
             LOGGER.info(
-                "No environment file specified; "
-                "looking for one in the notebook."
+                "Looking for environment file configuration in the notebook."
             )
             nb_env = nb_config.get("environment_file", None)
             if nb_env is not None:
@@ -219,6 +217,7 @@ class ImageBuilder:
                 self.environment = notebook.parent / nb_env
             else:
                 LOGGER.info(f"No environment specified in notebook.")
+                self.environment = None
         else:
             self.environment = environment
 
@@ -229,8 +228,9 @@ class ImageBuilder:
                 env_def = yaml.safe_load(fh)
         else:
             LOGGER.warning(
-                f"No environment file given; "
-                f"trying to reproduce current environment in Docker image"
+                f"No environment file found; "
+                f"trying to reproduce current environment in Docker image. "
+                f"This is not guaranteed to work reliably!"
             )
             env_def = self.export_conda_env()
         # We need xcube for server/viewer and pystac for EOAP stage-in/out

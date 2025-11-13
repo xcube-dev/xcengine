@@ -15,6 +15,8 @@ import yaml
 
 from .core import ScriptCreator, ImageBuilder, ContainerRunner
 
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 @click.group(
     help="Create and run compute engine scripts and containers "
@@ -138,6 +140,8 @@ def build(
     tag: str,
     eoap: pathlib.Path,
 ) -> None:
+    if environment is None:
+        LOGGER.info("No environment file specified on command line.")
     init_args = dict(notebook=notebook, environment=environment, tag=tag)
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
@@ -150,11 +154,9 @@ def build(
             )
             image = image_builder.build()
     if eoap:
-
         class IndentDumper(yaml.Dumper):
             def increase_indent(self, flow=False, indentless=False):
                 return super(IndentDumper, self).increase_indent(flow, False)
-
         eoap.write_text(
             yaml.dump(
                 image_builder.create_cwl(),
