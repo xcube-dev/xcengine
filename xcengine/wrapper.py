@@ -102,7 +102,15 @@ def main():
         viewer_context = server.ctx.get_api_ctx("viewer")
         viewer_context.config_items = {
             "config.json": json.dumps(
-                {"server": {"url": args.xcube_viewer_api_url}, "branding": {}}
+                {
+                    "server": {"url": args.xcube_viewer_api_url},
+                    "branding": {
+                        # "layerVisibilities": {
+                              # Set the default basemap.
+                        #     "baseMaps.CartoDB.Dark Matter": True
+                        # }
+                    },
+                }
             ),
             "images/logo.png": logo_data,
         }
