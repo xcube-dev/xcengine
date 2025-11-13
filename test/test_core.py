@@ -22,11 +22,15 @@ from xcengine.core import ChunkStream, ImageBuilder, ScriptCreator
 
 @patch("xcengine.core.ScriptCreator.__init__")
 @pytest.mark.parametrize("tag", [None, "bar"])
-def test_image_builder_init(init_mock, tmp_path, tag):
+@pytest.mark.parametrize("use_env", [False, True])
+def test_image_builder_init(init_mock, tmp_path, tag, use_env):
     nb_path = tmp_path / "foo.ipynb"
     nb_path.touch()
-    environment = tmp_path / "environment.yml"
-    environment.touch()
+    if use_env:
+        environment = tmp_path / "environment.yml"
+        environment.touch()
+    else:
+        environment = None
     build_path = tmp_path / "build"
     build_path.mkdir()
     init_mock.return_value = None
@@ -38,6 +42,7 @@ def test_image_builder_init(init_mock, tmp_path, tag):
     )
     assert ib.notebook == nb_path
     assert ib.build_dir == build_path
+    assert ib.environment == environment
     if tag is None:
         assert abs(
             datetime.datetime.now(datetime.UTC)
