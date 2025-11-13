@@ -62,9 +62,11 @@ def test_make_script(
 
 
 @pytest.mark.parametrize("specify_dir", [False, True])
+@pytest.mark.parametrize("specify_env", [False, True])
 @patch("xcengine.cli.ImageBuilder")
-def test_image_build(builder_mock, tmp_path, specify_dir):
+def test_image_build(builder_mock, tmp_path, specify_dir, specify_env):
     (nb_path := tmp_path / "foo.ipynb").touch()
+    (env_path := tmp_path / "environment.yml").touch()
     (build_dir := tmp_path / "build").mkdir()
     runner = CliRunner()
     tag = "foo"
@@ -73,13 +75,14 @@ def test_image_build(builder_mock, tmp_path, specify_dir):
         cli,
         ["image", "build", "--tag", tag]
         + (["--build-dir", str(build_dir)] if specify_dir else [])
+        + (["--environment", str(env_path)] if specify_env else [])
         + [str(nb_path)],
     )
     assert result.output.startswith("Built image")
     assert result.exit_code == 0
     builder_mock.assert_called_once_with(
         notebook=nb_path,
-        environment=None,
+        environment=(env_path if specify_env else None),
         tag=tag,
         build_dir=(build_dir if specify_dir else ANY),
     )

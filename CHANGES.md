@@ -1,5 +1,7 @@
 ## Changes in 0.1.2 (in development)
 
+* Improve handling of environment file specification (#63)
+
 ## Changes in 0.1.1
 
 * Improve automated parameter extraction (#9)
