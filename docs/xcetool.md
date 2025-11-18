@@ -21,6 +21,10 @@ This subcommand runs an xcengine container image. An image can also be run using
 `docker run` command, but `xcetool image run` provides some additional convenience
 (e.g. easy configuration of the HTTP port).
 
+If you give the `--server` flag, `xcetool` will run the container indefinitely as an
+xcube server. You can stop the container and force `xcetool` to exit by pressing
+ctrl-C on the command line (or by sending it an interrupt signal in some other way).
+
 ### `xcetool make-script` 
 
 This subcommand does not generate a container image, but a directory containing
