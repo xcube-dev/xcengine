@@ -6,6 +6,8 @@ import io
 import json
 import os
 import shutil
+import signal
+import socket
 import sys
 import tarfile
 import subprocess
@@ -337,7 +339,7 @@ class ContainerRunner:
     def __init__(
         self,
         image: Image | str,
-        output_dir: pathlib.Path,
+        output_dir: pathlib.Path | None,
         client: docker.DockerClient = None,
     ):
         self._client = client
@@ -388,6 +390,12 @@ class ContainerRunner:
             run_args["ports"] = {"8080": host_port}
         container: Container = self.client.containers.run(**run_args)
         LOGGER.info(f"Waiting for container {container.short_id} to complete.")
+        default_sigint_handler = signal.getsignal(signal.SIGINT)
+        def signal_hander(signum, frame):
+            signal.signal(signal.SIGINT, default_sigint_handler)
+            LOGGER.info(f"Caught SIGINT. Stopping container {container.short_id}")
+            container.stop()
+        signal.signal(signal.SIGINT, signal_hander)
         while container.status in {"created", "running"}:
             LOGGER.debug(
                 f"Waiting for {container.short_id} "
@@ -395,6 +403,7 @@ class ContainerRunner:
             )
             time.sleep(2)
             container.reload()
+        signal.signal(signal.SIGINT, default_sigint_handler)
         LOGGER.info(
             f'Container {container.short_id} has status "{container.status}".'
         )
@@ -404,7 +413,7 @@ class ContainerRunner:
             )
             self.extract_output_from_container(container)
             LOGGER.info(f"Results copied.")
-        if host_port is None and not keep:
+        if not keep:
             LOGGER.info(f"Removing container {container.short_id}...")
             container.remove(force=True)
             LOGGER.info(f"Container {container.short_id} removed.")
