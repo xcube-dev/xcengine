@@ -8,6 +8,7 @@ import logging
 import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 
 import click
@@ -17,6 +18,7 @@ from .core import ScriptCreator, ImageBuilder, ContainerRunner
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
 
 @click.group(
     help="Create and run compute engine scripts and containers "
@@ -154,9 +156,11 @@ def build(
             )
             image = image_builder.build()
     if eoap:
+
         class IndentDumper(yaml.Dumper):
             def increase_indent(self, flow=False, indentless=False):
                 return super(IndentDumper, self).increase_indent(flow, False)
+
         eoap.write_text(
             yaml.dump(
                 image_builder.create_cwl(),
@@ -221,6 +225,14 @@ def run(
         is not click.core.ParameterSource.DEFAULT
     )
     actual_port = port if server or port_specified_explicitly else None
+    if actual_port is not None:
+        print(
+            f"xcube server will be available at http://localhost:{actual_port}"
+        )
+        print(
+            f"xcube viewer will be available at "
+            f"http://localhost:{actual_port}/viewer"
+        )
     runner.run(
         run_batch=batch,
         host_port=actual_port,
