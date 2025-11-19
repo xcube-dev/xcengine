@@ -403,6 +403,7 @@ class ContainerRunner:
             )
             time.sleep(2)
             container.reload()
+        signal.signal(signal.SIGINT, default_sigint_handler)
         LOGGER.info(
             f'Container {container.short_id} has status "{container.status}".'
         )

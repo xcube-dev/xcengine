@@ -1,6 +1,11 @@
 import datetime
 import json
+import os
 import pathlib
+import signal
+import threading
+import time
+
 import pytz
 from io import BufferedReader
 import yaml
@@ -11,6 +16,8 @@ from unittest.mock import Mock
 
 import docker.models.images
 import schema_salad.exceptions
+from docker import DockerClient
+from docker.models.containers import Container
 
 import xcengine.core
 import xcengine.parameters
@@ -89,6 +96,49 @@ def test_runner_init_with_image():
         image := Mock(docker.models.images.Image), pathlib.Path("/foo")
     )
     assert runner.image == image
+
+
+def test_runner_sigint():
+    runner = xcengine.core.ContainerRunner(
+        image := Mock(docker.models.images.Image),
+        None,
+        client := Mock(DockerClient)
+    )
+    image.tags = []
+    client.containers.run.return_value = (container := Mock(Container))
+    container.status = "running"
+    def container_stop():
+        container.status = "stopped"
+    container.stop = container_stop
+    pid = os.getpid()
+
+    old_alarm_handler = signal.getsignal(signal.SIGALRM)
+    class AlarmException(Exception):
+        pass
+    def alarm_handler(signum, frame):
+        raise AlarmException()
+    signal.signal(signal.SIGALRM, alarm_handler)
+
+    def interrupt_process():
+        time.sleep(1)  # allow one second for runner to start
+        os.kill(pid, signal.SIGINT)
+    thread = threading.Thread(target=interrupt_process, daemon=True)
+    thread.start()
+
+    signal.alarm(5)
+    try:
+        # Should trap imminent SIGINT from interrupt_process and exit quickly
+        runner.run(False, 8080, False, False)
+    except AlarmException:
+        # time-out, exception raised by alarm_handler
+        # We need a time-out so that the test fails rather than hanging.
+        assert False, "Container did not stop on SIGINT"
+    finally:
+        # Reset the alarm handler and cancel the alarm to avoid affecting
+        # subsequent tests.
+        signal.signal(signal.SIGALRM, old_alarm_handler)
+        signal.alarm(0)
+    assert container.status == "stopped"
 
 
 @patch("xcengine.core.subprocess.run")
