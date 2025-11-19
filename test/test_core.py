@@ -97,6 +97,22 @@ def test_runner_init_with_image():
     )
     assert runner.image == image
 
+@pytest.mark.parametrize("keep", [False, True])
+def test_runner_run_keep(keep: bool):
+    runner = xcengine.core.ContainerRunner(
+        image := Mock(docker.models.images.Image),
+        None,
+        client := Mock(DockerClient)
+    )
+    image.tags = []
+    client.containers.run.return_value = (container := MagicMock(Container))
+    container.status = "exited"
+    runner.run(False, 8080, False, keep)
+    if keep:
+        container.remove.assert_not_called()
+    else:
+        container.remove.assert_called_once_with(force=True)
+
 
 def test_runner_sigint():
     runner = xcengine.core.ContainerRunner(

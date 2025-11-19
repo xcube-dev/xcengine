@@ -339,7 +339,7 @@ class ContainerRunner:
     def __init__(
         self,
         image: Image | str,
-        output_dir: pathlib.Path,
+        output_dir: pathlib.Path | None,
         client: docker.DockerClient = None,
     ):
         self._client = client
