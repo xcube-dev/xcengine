@@ -1,3 +1,4 @@
+import re
 import runpy
 import subprocess
 from unittest.mock import patch, ANY, MagicMock
@@ -101,4 +102,28 @@ def test_image_run(runner_mock):
         host_port=None,
         from_saved=False,
         keep=False,
+    )
+
+
+@patch("xcengine.cli.ContainerRunner")
+def test_image_run_print_urls(runner_mock):
+    cli_runner = CliRunner()
+    instance_mock = runner_mock.return_value = MagicMock()
+    port = 32168
+    result = cli_runner.invoke(
+        cli, ["image", "run", "--server", "--port", str(port), "foo"]
+    )
+    runner_mock.assert_called_once_with(image="foo", output_dir=None)
+    assert result.exit_code == 0
+    instance_mock.run.assert_called_once_with(
+        run_batch=False,
+        host_port=port,
+        from_saved=False,
+        keep=False,
+    )
+    assert re.search(
+        f"server.*http://localhost:{port}", result.stdout, re.IGNORECASE
+    )
+    assert re.search(
+        f"viewer.*http://localhost:{port}/viewer", result.stdout, re.IGNORECASE
     )
