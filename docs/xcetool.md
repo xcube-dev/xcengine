@@ -19,11 +19,19 @@ a CWL file defining a corresponding application package.
 
 This subcommand runs an xcengine container image. An image can also be run using the
 `docker run` command, but `xcetool image run` provides some additional convenience
-(e.g. easy configuration of the HTTP port).
+(e.g. easy configuration of a server HTTP port).
 
-If you give the `--server` flag, `xcetool` will run the container indefinitely as an
-xcube server. You can stop the container and force `xcetool` to exit by pressing
-ctrl-C on the command line (or by sending it an interrupt signal in some other way).
+If you use the `--server` option with `xcetool image run`, the image will be run in
+xcube server mode: after the code from the input notebook is used to generate datasets,
+those datasets will be made available in an xcube server instance. You can also use
+the `--port` option to select the HTTP port where the xcube server should be exposed.
+The server also includes an interactive web viewer component. On start-up, `xcetool`
+will print the URLs of the xcube server and viewer to the standard output. 
+
+If you give the `--server` or `--port` options, `xcetool` will run the container
+indefinitely as an xcube server and viewer instance. You can stop the container and
+force `xcetool` to exit by pressing ctrl-C on the command line (or by sending it an
+interrupt signal in some other way).
 
 ### `xcetool make-script` 
 

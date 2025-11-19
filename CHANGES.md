@@ -2,6 +2,7 @@
 
 * Improve handling of environment file specification (#63)
 * Stop running container on SIGINT (#62)
+* `xcetool image run --server` prints server and viewer urls (#46)
 
 ## Changes in 0.1.1
 
