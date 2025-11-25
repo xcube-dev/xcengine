@@ -7,7 +7,6 @@ import json
 import os
 import shutil
 import signal
-import socket
 import sys
 import tarfile
 import subprocess
@@ -263,6 +262,7 @@ class ImageBuilder:
         )
         pip_inspect = PipInspector()
         if pip_map:
+            assert pip_index is not None
             nonlocals = []
             for pkg in pip_map["pip"]:
                 if pip_inspect.is_local(pkg):
@@ -340,7 +340,7 @@ class ContainerRunner:
         self,
         image: Image | str,
         output_dir: pathlib.Path | None,
-        client: docker.DockerClient = None,
+        client: docker.DockerClient | None = None,
     ):
         self._client = client
         match image:
@@ -383,7 +383,7 @@ class ContainerRunner:
             )
             + (["--from-saved"] if from_saved else [])
         )
-        run_args = dict(
+        run_args: dict[str, Any] = dict(
             image=self.image, command=command, remove=False, detach=True
         )
         if host_port is not None:
@@ -429,6 +429,7 @@ class ContainerRunner:
     def extract_output_from_container(self, container: Container) -> None:
         # This assumes the image-defined CWD, so it won't work in EOAP mode,
         # but EOAP has its own protocol for data stage-in/out anyway.
+        assert self.output_dir is not None
         bits, stat = container.get_archive("/home/mambauser/output")
         reader = io.BufferedReader(ChunkStream(bits))
         with tarfile.open(name=None, mode="r|", fileobj=reader) as tar_fh:
@@ -463,7 +464,7 @@ class PipInspector:
     local filesystem.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         environment = os.environ.copy()
         for varname in "FORCE_COLOR", "CLICOLOR", "CLICOLOR_FORCE":
             environment.pop(varname, None)
