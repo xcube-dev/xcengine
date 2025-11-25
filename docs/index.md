@@ -20,7 +20,7 @@ links to further resources.
 2. [Installing xcengine](installing.md)
 3. [Making a Jupyter notebook xcengine-compatible](notebook.md)
 4. [Running `xcetool`](xcetool.md)
-5. [Testing and running Application Packages](testing.md)
+5. [Testing and running Application Packages](running-eoaps.md)
 6. [Further documentation and resources](resources.md)
 
 xcengine is developed as part of the [Open Earth Monitor

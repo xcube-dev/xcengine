@@ -8,5 +8,5 @@ nav:
   - Installation: installing.md
   - Preparing your notebook: notebook.md
   - Running xcengine: xcetool.md
-  - Running Application Packages: testing.md
+  - Running Application Packages: running-eoaps.md
   - Further resources: resources.md
