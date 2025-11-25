@@ -24,10 +24,10 @@ An Application Package consists of two parts:
    which defines how the code in the container image should be run,
    and what its available parameters, inputs, and outputs are.
 
-Application Packages are designed to be run on cloud processing
-platforms, but can also be tested locally. Application Packages provide
-a great deal of power and flexibility; partly because of this flexibility, they
-can be complex and challenging to build from scratch.
+Application Packages are designed to be run on cloud processing platforms, but
+can also be tested locally. Application Packages provide a great deal of power
+and flexibility; partly because of this flexibility, they can be complex and
+challenging to build from scratch.
 
 ## xcube Server and Viewer
 
