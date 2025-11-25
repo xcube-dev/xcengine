@@ -2,3 +2,11 @@ site_name: xcengine
 site_url: https://xcube-dev.github.io/xcengine
 theme:
   name: material
+nav:
+  - Home: index.md
+  - Introduction: intro.md
+  - Installation: installing.md
+  - Preparing your notebook: notebook.md
+  - Running xcengine: xcetool.md
+  - Running Application Packages: running-eoaps.md
+  - Further resources: resources.md
