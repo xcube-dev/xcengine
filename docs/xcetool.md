@@ -11,11 +11,47 @@ details on usage and available options.
 
 ### `xcetool image build`
 
+Usage: `xcetool image build [OPTIONS] NOTEBOOK`
+
 This is the main `xcetool` subcommand: it builds a container image from a supplied
 notebook and environment file. If given the `--eoap` argument, it also generates
 a CWL file defining a corresponding application package.
 
+Options:
+
+- `-b`, `--build-dir` `DIRECTORY`: Build directory to use for preparing the Docker
+  image. If not specified, an automatically created temporary directory will be used.
+  This option is mainly useful for debugging.
+- `-e`, `--environment` `FILE`: Conda environment file to use in Docker image.
+  If no environment file is specified here or in the notebook, xcetool will try to
+  reproduce the current environment as a last resort, but this is not recommended.
+- `-t`, `--tag` `TEXT`: Tag to apply to the Docker image. If not specified, a
+  timestamp-based tag will be generated automatically.
+- `-a`, `--eoap` `PATH`: Write a CWL file defining an Earth Observation Application
+  Package to the specified path.
+
 ### `xcetool image run`
+
+Usage: `xcetool image run [OPTIONS] IMAGE`
+
+```text
+Options:
+  -b, --batch             Run the compute engine as a batch script.
+                          Use with the --output option to copy output
+                          out of the container.
+  -s, --server            Run the compute engine as an xcube server.
+  -p, --port INTEGER      Host port for xcube server (default: 8080).
+                          Implies --server.
+  -f, --from-saved        If --batch and --server both used, serve
+                          datasets from saved Zarrs rather than
+                          computing them on the fly.
+  -o, --output DIRECTORY  Write any output data to this directory,
+                          which will be created if it does not exist
+                          already.
+  -k, --keep              Keep container after it has finished
+                          running.
+  --help                  Show this message and exit.
+```
 
 This subcommand runs an xcengine container image. An image can also be run using the
 `docker run` command, but `xcetool image run` provides some additional convenience
