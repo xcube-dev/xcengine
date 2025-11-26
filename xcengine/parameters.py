@@ -2,12 +2,11 @@ import logging
 import os
 import pathlib
 import typing
-from typing import Any
+from typing import Any, ClassVar
 
 import pystac
 import xarray as xr
 import yaml
-from typing import ClassVar
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +23,7 @@ class NotebookParameters:
     def __init__(
         self,
         params: dict[str, tuple[type, Any]],
-        config: dict[str, Any] = None,
+        config: dict[str, Any] | None = None,
     ):
         self.params = params
         self.config = {} if config is None else config
@@ -73,7 +72,7 @@ class NotebookParameters:
         cls, code: str, setup_code: str | None = None
     ) -> dict[str, tuple[type, Any]]:
         if setup_code is None:
-            locals_ = {}
+            locals_: dict[str, object] = {}
             old_locals = {}
         else:
             exec(setup_code, globals(), locals_ := {})
@@ -135,13 +134,13 @@ class NotebookParameters:
 
     def read_params_combined(
         self, cli_args: list[str] | None
-    ) -> dict[str, str]:
+    ) -> dict[str, Any]:
         params = self.read_params_from_env()
         if cli_args:
             params.update(self.read_params_from_cli(cli_args))
         return params
 
-    def read_params_from_env(self) -> dict[str, str]:
+    def read_params_from_env(self) -> dict[str, Any]:
         values = {}
         for param_name, (type_, _) in self.params.items():
             env_var_name = "xce_" + param_name
@@ -154,7 +153,7 @@ class NotebookParameters:
                 )
         return values
 
-    def read_params_from_cli(self, args: list[str]) -> dict[str, str]:
+    def read_params_from_cli(self, args: list[str]) -> dict[str, Any]:
         values = {}
         for param_name, (type_, _) in self.params.items():
             arg_name = "--" + param_name.replace("_", "-")
@@ -216,7 +215,7 @@ class NotebookParameters:
                 ),
             )
         )
-        asset = next(a for a in item.assets.values() if "data" in a.roles)
+        asset = next(a for a in item.assets.values() if "data" in (a.roles or []))
         return xr.open_dataset(stage_in_path / asset.href)
 
     @staticmethod

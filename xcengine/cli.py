@@ -8,8 +8,8 @@ import logging
 import os
 import pathlib
 import subprocess
-import sys
 import tempfile
+from typing import TypedDict
 
 import click
 import yaml
@@ -86,7 +86,7 @@ def make_script(
         output_dir=output_dir, clear_output=clear
     )
     if batch or server:
-        args = ["python3", output_dir / "execute.py"]
+        args: list[str | pathlib.Path] = ["python3", output_dir / "execute.py"]
         if batch:
             args.append("--batch")
         if server:
@@ -102,7 +102,8 @@ def image_cli():
 
 
 @image_cli.command(
-    help="Build, and optionally run, a compute engine as a Docker image"
+    help="Build a compute engine as a Docker image, optionally generating an "
+         "Application Package"
 )
 @click.option(
     "-b",
@@ -144,7 +145,11 @@ def build(
 ) -> None:
     if environment is None:
         LOGGER.info("No environment file specified on command line.")
-    init_args = dict(notebook=notebook, environment=environment, tag=tag)
+    class InitArgs(TypedDict):
+        notebook: pathlib.Path
+        environment: pathlib.Path
+        tag: str
+    init_args = InitArgs(notebook=notebook, environment=environment, tag=tag)
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
@@ -156,11 +161,9 @@ def build(
             )
             image = image_builder.build()
     if eoap:
-
         class IndentDumper(yaml.Dumper):
             def increase_indent(self, flow=False, indentless=False):
                 return super(IndentDumper, self).increase_indent(flow, False)
-
         eoap.write_text(
             yaml.dump(
                 image_builder.create_cwl(),
@@ -212,7 +215,7 @@ def build(
 def run(
     ctx: click.Context,
     batch: bool,
-    server: False,
+    server: bool,
     port: int,
     from_saved: bool,
     keep: bool,

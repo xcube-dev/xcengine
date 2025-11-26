@@ -1,13 +1,16 @@
 # Copyright (c) 2024-2025 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
+
 from collections import namedtuple
 from datetime import datetime
 import pathlib
 import shutil
+from typing import NamedTuple, Any, Mapping
 
 import pystac
 import xarray as xr
+from xarray import Dataset
 
 
 def clear_directory(directory: pathlib.Path) -> None:
@@ -19,7 +22,7 @@ def clear_directory(directory: pathlib.Path) -> None:
 
 
 def write_stac(
-    datasets: dict[str, xr.Dataset], stac_root: pathlib.Path
+    datasets: Mapping[str, xr.Dataset], stac_root: pathlib.Path
 ) -> None:
     catalog_path = stac_root / "catalog.json"
     if catalog_path.exists():
@@ -57,9 +60,13 @@ def write_stac(
             media_type="application/x-netcdf" if output_format == "netcdf" else "application/vnd.zarr",
             title=ds.attrs.get("title", ds_name),
         )
-        bb = namedtuple("Bounds", ["left", "bottom", "right", "top"])(
-            0, -90, 360, 90
-        )  # TODO determine and set actual bounds here
+        class Bounds(NamedTuple):
+            left: float
+            bottom: float
+            right: float
+            top: float
+        # TODO determine and set actual bounds here
+        bb = Bounds(0, -90, 360, 90)
         item = pystac.Item(
             id=ds_name,
             geometry={
@@ -85,8 +92,8 @@ def write_stac(
 
 
 def save_datasets(
-    datasets, output_path: pathlib.Path, eoap_mode: bool
-) -> dict[str, xr.Dataset]:
+    datasets: Mapping[str, Dataset], output_path: pathlib.Path, eoap_mode: bool
+) -> dict[str, pathlib.Path]:
     saved_datasets = {}
     # EOAP doesn't require an "output" subdirectory (output can go anywhere
     # in the CWD) but it's used by xcetool's built-in runner.
@@ -98,6 +105,7 @@ def save_datasets(
         suffix = "nc" if output_format == "netcdf" else "zarr"
         dataset_path = output_subpath / f"{ds_id}.{suffix}"
         saved_datasets[ds_id] = dataset_path
+
         if output_format == "netcdf":
             ds.to_netcdf(dataset_path)
         else:
