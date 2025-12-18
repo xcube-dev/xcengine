@@ -5,12 +5,16 @@ also ways to run CWL files and complete Application Packages locally.
 
 ## Understanding and debugging xcengine container images
 
+### The base image
+
 When generating a container image, xcengine uses a
 [micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html)
 image as a base. If you need to investigate or
 debug an xcengine image, or if you're just curious about its structure, you may
 find the [micromamba-docker
 documentation](https://micromamba-docker.readthedocs.io/) useful.
+
+### Entry points
 
 xcengine sets a custom entry point to run its own runner script, so any commands
 provided when running a container from an xcengine image with `docker run`
@@ -32,6 +36,15 @@ as well, like this:
 
 This resets the entry point to the usual micromamba-docker entry point, which
 sets up the Python environment, then runs bash within that environment.
+
+### The Dockerfile and environment file
+
+To aid reproducibility, the Dockerfile and environment file used to set up the
+container image are both included in the image itself, in the `/tmp`
+directory. The rest of the code and configuration for the image is in the
+`/home/mambauser` directory. In combination with the publicly available
+micromamba base image, each xcengine image thus contains the resources
+necessary to reproduce its own build process.
 
 ## Running with cwltool
 

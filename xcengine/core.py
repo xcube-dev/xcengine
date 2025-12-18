@@ -302,6 +302,7 @@ class ImageBuilder:
         dockerfile = textwrap.dedent(
             """
         FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
+        COPY Dockerfile Dockerfile
         COPY environment.yml environment.yml
         RUN micromamba install -y -n base -f environment.yml && \
         micromamba clean --all --yes
