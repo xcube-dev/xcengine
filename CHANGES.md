@@ -5,6 +5,7 @@
 * `xcetool image run --server` prints server and viewer URLs (#46)
 * Improve documentation (#54, #55)
 * Improve type annotations and checks (#68)
+* Include Dockerfile in built images (#55)
 
 ## Changes in 0.1.1
 
