@@ -6,6 +6,7 @@
 * Improve documentation (#54, #55)
 * Improve type annotations and checks (#68)
 * Include Dockerfile in built images (#55)
+* Look for environment.yml automatically (#41)
 
 ## Changes in 0.1.1
 
