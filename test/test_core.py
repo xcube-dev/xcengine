@@ -29,27 +29,35 @@ from xcengine.core import ChunkStream, ImageBuilder, ScriptCreator
 
 @patch("xcengine.core.ScriptCreator.__init__")
 @pytest.mark.parametrize("tag", [None, "bar"])
-@pytest.mark.parametrize("use_env", [False, True])
-def test_image_builder_init(init_mock, tmp_path, tag, use_env):
+@pytest.mark.parametrize("env_file_name", ["environment.yml", "foo.yaml", None])
+@pytest.mark.parametrize("use_env_file_param", [False, True])
+def test_image_builder_init(
+    init_mock,
+    tmp_path: pathlib.Path,
+    tag: str | None,
+    env_file_name: str | None,
+    use_env_file_param: bool,
+):
     nb_path = tmp_path / "foo.ipynb"
     nb_path.touch()
-    if use_env:
-        environment = tmp_path / "environment.yml"
-        environment.touch()
+    if env_file_name is not None:
+        environment_path = tmp_path / env_file_name
+        environment_path.touch()
     else:
-        environment = None
+        environment_path = None
     build_path = tmp_path / "build"
     build_path.mkdir()
     init_mock.return_value = None
     ib = ImageBuilder(
         notebook=nb_path,
-        environment=environment,
+        environment=environment_path if use_env_file_param else None,
         build_dir=build_path,
         tag=tag,
     )
     assert ib.notebook == nb_path
     assert ib.build_dir == build_path
-    assert ib.environment == environment
+    expected_env = environment_path if (use_env_file_param or env_file_name == "environment.yml") else None
+    assert ib.environment == expected_env
     if tag is None:
         assert abs(
             datetime.datetime.now(datetime.UTC)
@@ -97,12 +105,13 @@ def test_runner_init_with_image():
     )
     assert runner.image == image
 
+
 @pytest.mark.parametrize("keep", [False, True])
 def test_runner_run_keep(keep: bool):
     runner = xcengine.core.ContainerRunner(
         image := Mock(docker.models.images.Image),
         None,
-        client := Mock(DockerClient)
+        client := Mock(DockerClient),
     )
     image.tags = []
     client.containers.run.return_value = (container := MagicMock(Container))
@@ -118,26 +127,32 @@ def test_runner_sigint():
     runner = xcengine.core.ContainerRunner(
         image := Mock(docker.models.images.Image),
         None,
-        client := Mock(DockerClient)
+        client := Mock(DockerClient),
     )
     image.tags = []
     client.containers.run.return_value = (container := Mock(Container))
     container.status = "running"
+
     def container_stop():
         container.status = "stopped"
+
     container.stop = container_stop
     pid = os.getpid()
 
     old_alarm_handler = signal.getsignal(signal.SIGALRM)
+
     class AlarmException(Exception):
         pass
+
     def alarm_handler(signum, frame):
         raise AlarmException()
+
     signal.signal(signal.SIGALRM, alarm_handler)
 
     def interrupt_process():
         time.sleep(1)  # allow one second for runner to start
         os.kill(pid, signal.SIGINT)
+
     thread = threading.Thread(target=interrupt_process, daemon=True)
     thread.start()
 

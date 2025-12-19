@@ -179,6 +179,7 @@ class ImageBuilder:
     """
 
     tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
+    environment: pathlib.Path | None = None
 
     def __init__(
         self,
@@ -206,7 +207,9 @@ class ImageBuilder:
         else:
             self.tag = tag
 
-        if environment is None:
+        if environment is not None:
+            self.environment = environment
+        else:
             LOGGER.info(
                 "Looking for environment file configuration in the notebook."
             )
@@ -218,9 +221,14 @@ class ImageBuilder:
                 self.environment = notebook.parent / nb_env
             else:
                 LOGGER.info(f"No environment specified in notebook.")
-                self.environment = None
-        else:
-            self.environment = environment
+                LOGGER.info(f"Looking for a file named \"environment.yml\".")
+                notebook_sibling = notebook.parent / "environment.yml"
+                if notebook_sibling.is_file():
+                    self.environment = notebook_sibling
+                    LOGGER.info(f"Using environment from {notebook_sibling}")
+                else:
+                    LOGGER.info(f"No environment found at {notebook_sibling}")
+                    self.environment = None
 
     def build(self) -> Image:
         self.script_creator.convert_notebook_to_script(self.build_dir)
