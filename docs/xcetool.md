@@ -26,8 +26,10 @@ Options:
 -   `-e`, `--environment` `FILE`:
     Conda environment file to use in Docker image.
     If no environment file is specified here or in the notebook,
+    xcetool will look for a file called `environment.yml`
+    in the notebook's directory. If all else fails,
     xcetool will try to reproduce the current environment
-    as a last resort, but this is not recommended.
+    as a last resort, but this is not guaranteed to succeed.
 -   `-t`, `--tag` `TEXT`: Tag to apply to the Docker image.
     If not specified, a
     timestamp-based tag will be generated automatically.

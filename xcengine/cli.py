@@ -117,7 +117,9 @@ def image_cli():
     "--environment",
     type=click.Path(path_type=pathlib.Path, dir_okay=False, file_okay=True),
     help="Conda environment file to use in Docker image. "
-    "If not specified, try to reproduce the current environment.",
+    "If no environment file is specified here or in the notebook, and if "
+    "there is no file named environment.yml in the notebook's directory, "
+    "xcetool will try to reproduce the current environment."
 )
 @click.option(
     "-t",
