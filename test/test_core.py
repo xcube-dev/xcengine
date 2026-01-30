@@ -29,7 +29,9 @@ from xcengine.core import ChunkStream, ImageBuilder, ScriptCreator
 
 @patch("xcengine.core.ScriptCreator.__init__")
 @pytest.mark.parametrize("tag", [None, "bar"])
-@pytest.mark.parametrize("env_file_name", ["environment.yml", "foo.yaml", None])
+@pytest.mark.parametrize(
+    "env_file_name", ["environment.yml", "foo.yaml", None]
+)
 @pytest.mark.parametrize("use_env_file_param", [False, True])
 def test_image_builder_init(
     init_mock,
@@ -56,7 +58,11 @@ def test_image_builder_init(
     )
     assert ib.notebook == nb_path
     assert ib.build_dir == build_path
-    expected_env = environment_path if (use_env_file_param or env_file_name == "environment.yml") else None
+    expected_env = (
+        environment_path
+        if (use_env_file_param or env_file_name == "environment.yml")
+        else None
+    )
     assert ib.environment == expected_env
     if tag is None:
         assert abs(
@@ -121,6 +127,28 @@ def test_runner_run_keep(keep: bool):
         container.remove.assert_not_called()
     else:
         container.remove.assert_called_once_with(force=True)
+
+
+def test_runner_extra_args():
+    runner = xcengine.core.ContainerRunner(
+        image := Mock(docker.models.images.Image),
+        None,
+        client := Mock(DockerClient),
+    )
+    image.tags = []
+    client.containers.run.return_value = (container := MagicMock(Container))
+    container.status = "exited"
+    script_args = ["--foo", "--bar", "42", "--baz", "somestring"]
+    runner.run(
+        run_batch=False,
+        host_port=None,
+        from_saved=False,
+        keep=False,
+        script_args=script_args,
+    )
+    run_args = client.containers.run.call_args
+    command = run_args[1]["command"]
+    assert command == ["python", "execute.py"] + script_args
 
 
 def test_runner_sigint():
