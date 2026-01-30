@@ -380,6 +380,7 @@ class ContainerRunner:
     ):
         LOGGER.info(f"Running container from image {self.image.short_id}")
         LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
+        assert isinstance(script_args, list) or script_args is None
         command = (
             ["python", "execute.py"]
             + (["--batch"] if run_batch else [])

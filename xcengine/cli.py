@@ -103,7 +103,7 @@ def image_cli():
 
 @image_cli.command(
     help="Build a compute engine as a Docker image, optionally generating an "
-         "Application Package"
+    "Application Package"
 )
 @click.option(
     "-b",
@@ -119,7 +119,7 @@ def image_cli():
     help="Conda environment file to use in Docker image. "
     "If no environment file is specified here or in the notebook, and if "
     "there is no file named environment.yml in the notebook's directory, "
-    "xcetool will try to reproduce the current environment."
+    "xcetool will try to reproduce the current environment.",
 )
 @click.option(
     "-t",
@@ -147,10 +147,12 @@ def build(
 ) -> None:
     if environment is None:
         LOGGER.info("No environment file specified on command line.")
+
     class InitArgs(TypedDict):
         notebook: pathlib.Path
         environment: pathlib.Path
         tag: str
+
     init_args = InitArgs(notebook=notebook, environment=environment, tag=tag)
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
@@ -163,9 +165,11 @@ def build(
             )
             image = image_builder.build()
     if eoap:
+
         class IndentDumper(yaml.Dumper):
             def increase_indent(self, flow=False, indentless=False):
                 return super(IndentDumper, self).increase_indent(flow, False)
+
         eoap.write_text(
             yaml.dump(
                 image_builder.create_cwl(),
@@ -176,7 +180,14 @@ def build(
     print(f"Built image with tags {image.tags}")
 
 
-@image_cli.command(help="Run a compute engine image as a Docker container.")
+@image_cli.command(
+    help="Run a compute engine image as a Docker container. "
+    "Any arguments provided after IMAGE will be passed on to the command "
+    "executed inside the container.",
+    context_settings=dict(
+        ignore_unknown_options=True,
+    ),
+)
 @click.option(
     "-b",
     "--batch",
@@ -213,6 +224,12 @@ def build(
     help="Keep container after it has finished running.",
 )
 @click.argument("image", type=str)
+@click.argument(
+    "script_args",
+    nargs=-1,
+    type=click.UNPROCESSED,
+    metavar="[CONTAINER_ARGUMENT]...",
+)
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -223,6 +240,7 @@ def run(
     keep: bool,
     image: str,
     output: pathlib.Path,
+    script_args,
 ) -> None:
     runner = ContainerRunner(image=image, output_dir=output)
     port_specified_explicitly = (
@@ -243,4 +261,5 @@ def run(
         host_port=actual_port,
         from_saved=from_saved,
         keep=keep,
+        script_args=list(script_args),
     )
