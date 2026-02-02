@@ -56,7 +56,8 @@ xcetool = "xcengine.cli:cli"
 dev = [
   "cwltool",
   "pytest",
-  "pytest-cov"
+  "pytest-cov",
+  "pytz"
 ]
 doc = [
   "mkdocs",
