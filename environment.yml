@@ -18,6 +18,7 @@ dependencies:
   - cwltool
   - pytest
   - pytest-cov
+  - pytz
 
 # Note: xcube is not required for the conversion itself, but is required
 # to run generated scripts outside containers ("create" mode). xcube is

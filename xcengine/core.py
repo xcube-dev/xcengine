@@ -33,6 +33,7 @@ from xcengine.parameters import NotebookParameters
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
@@ -221,7 +222,7 @@ class ImageBuilder:
                 self.environment = notebook.parent / nb_env
             else:
                 LOGGER.info(f"No environment specified in notebook.")
-                LOGGER.info(f"Looking for a file named \"environment.yml\".")
+                LOGGER.info(f'Looking for a file named "environment.yml".')
                 notebook_sibling = notebook.parent / "environment.yml"
                 if notebook_sibling.is_file():
                     self.environment = notebook_sibling
@@ -375,9 +376,11 @@ class ContainerRunner:
         host_port: int | None,
         from_saved: bool,
         keep: bool,
+        script_args: list[str] | None = None,
     ):
         LOGGER.info(f"Running container from image {self.image.short_id}")
         LOGGER.info(f"Image tags: {' '.join(self.image.tags)}")
+        assert isinstance(script_args, list) or script_args is None
         command = (
             ["python", "execute.py"]
             + (["--batch"] if run_batch else [])
@@ -391,6 +394,9 @@ class ContainerRunner:
                 else []
             )
             + (["--from-saved"] if from_saved else [])
+            + script_args
+            if script_args is not None
+            else []
         )
         run_args: dict[str, Any] = dict(
             image=self.image, command=command, remove=False, detach=True
@@ -400,10 +406,14 @@ class ContainerRunner:
         container: Container = self.client.containers.run(**run_args)
         LOGGER.info(f"Waiting for container {container.short_id} to complete.")
         default_sigint_handler = signal.getsignal(signal.SIGINT)
+
         def signal_hander(signum, frame):
             signal.signal(signal.SIGINT, default_sigint_handler)
-            LOGGER.info(f"Caught SIGINT. Stopping container {container.short_id}")
+            LOGGER.info(
+                f"Caught SIGINT. Stopping container {container.short_id}"
+            )
             container.stop()
+
         signal.signal(signal.SIGINT, signal_hander)
         while container.status in {"created", "running"}:
             LOGGER.debug(
