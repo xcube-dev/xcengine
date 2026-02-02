@@ -39,7 +39,7 @@ Options:
 
 ### `xcetool image run`
 
-Usage: `xcetool image run [OPTIONS] IMAGE`
+Usage: `xcetool image run [OPTIONS] IMAGE [CONTAINER_ARGUMENT]...`
 
 Options:
 
@@ -59,9 +59,11 @@ Options:
     running.
 -   `--help`: Show a help message for this subcommand and exit.
 
-This subcommand runs an xcengine container image. An image can also be run
-using the `docker run` command, but `xcetool image run` provides some
-additional convenience (e.g. easy configuration of a server HTTP port).
+This subcommand runs an xcengine container image. Any arguments provided
+after IMAGE will be passed on to the command executed inside the container.
+An image can also be run using the `docker run` command, but
+`xcetool image run` provides some additional convenience (e.g. easy
+configuration of a server HTTP port).
 
 If you use the `--server` option with `xcetool image run`, the image will be
 run in xcube server mode: after the code from the input notebook is used to
