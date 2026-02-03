@@ -1,6 +1,5 @@
 import re
-import runpy
-import subprocess
+import urllib
 from unittest.mock import patch, ANY, MagicMock
 import pytest
 from click.testing import CliRunner
@@ -148,3 +147,35 @@ def test_image_run_script_args(runner_mock):
         keep=False,
         script_args=["--bar"],
     )
+
+
+@patch("xcengine.cli.ContainerRunner")
+@patch("webbrowser.open")
+@patch("urllib.request.urlopen")
+def test_image_run_open_browser(urlopen_mock, open_mock, runner_mock):
+    cli_runner = CliRunner()
+    port = 8080
+
+    count = 0
+    passed_url = None
+    def urlopen(url):
+        nonlocal count, passed_url
+        passed_url = url
+        if count == 0:
+            count += 1
+            raise urllib.error.URLError("mock")
+        else:
+            count += 1
+            return None
+
+    urlopen_mock.side_effect = urlopen
+
+    cli_runner.invoke(
+        cli, ["image", "run", "--port", str(port), "--open-browser", "foo"]
+    )
+    import time
+
+    time.sleep(3)
+    assert count == 2
+    assert passed_url == f"http://localhost:{port}"
+    open_mock.assert_called_once_with(f"http://localhost:{port}/viewer")
