@@ -57,6 +57,8 @@ Options:
     already.
 -   `-k`, `--keep`: Keep container after it has finished
     running.
+-   `-b`, `--open-browser`: After the server has started, open a web browser
+    window showing the viewer. Implies `--server`.
 -   `--help`: Show a help message for this subcommand and exit.
 
 This subcommand runs an xcengine container image. Any arguments provided

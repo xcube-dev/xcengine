@@ -28,7 +28,12 @@ logging.basicConfig(level=logging.INFO)
     help="Create and run compute engine scripts and containers "
     "from IPython notebooks"
 )
-@click.option("-v", "--verbose", count=True)
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="Increase the verbosity of the log messages."
+)
 def cli(verbose):
     if verbose > 0:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -231,7 +236,8 @@ def build(
     "-b",
     "--open-browser",
     is_flag=True,
-    help="Open a web browser window showing the viewer. Implies --server.",
+    help="After the server has started, open a web browser window "
+    "showing the viewer. Implies --server.",
 )
 @click.argument("image", type=str)
 @click.argument(
