@@ -116,9 +116,9 @@ def save_datasets(
             ds.to_netcdf(dataset_path)
         else:
             ds.to_zarr(dataset_path)
-    # The "finished" file is a flag to indicate to a runner when
+    # The "datasets_saved" file is a flag to indicate to a runner when
     # processing is complete, though the xcetool runner doesn't yet use it.
-    (output_path / "finished").touch()
+    (output_path / "datasets_saved").touch()
     if eoap_mode:
         write_stac(datasets, output_path)
     return saved_datasets
