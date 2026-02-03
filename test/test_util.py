@@ -70,11 +70,13 @@ def test_save_datasets(tmp_path, dataset, eoap_mode, ds2_format):
     if ds2_format is not None:
         datasets["ds2"].attrs["xcengine_output_format"] = ds2_format
     save_datasets(datasets, tmp_path, eoap_mode)
+
     def outdir(ds_id):
         return tmp_path / (ds_id if eoap_mode else "output")
+
     assert (outdir("ds1") / "ds1.zarr").is_dir()
     ds2_suffix = "nc" if ds2_format == "netcdf" else "zarr"
-    ds2_path =  outdir("ds2") / f"ds2.{ds2_suffix}"
+    ds2_path = outdir("ds2") / f"ds2.{ds2_suffix}"
     if ds2_format == "netcdf":
         assert ds2_path.is_file()
     else:

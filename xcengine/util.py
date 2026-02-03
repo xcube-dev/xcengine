@@ -57,14 +57,20 @@ def write_stac(
             # https://planetarycomputer.microsoft.com/api/stac/v1/collections/terraclimate
             # uses the similar "application/vnd+zarr" but RFC 6838 mandates
             # "." rather than "+".
-            media_type="application/x-netcdf" if output_format == "netcdf" else "application/vnd.zarr",
+            media_type=(
+                "application/x-netcdf"
+                if output_format == "netcdf"
+                else "application/vnd.zarr"
+            ),
             title=ds.attrs.get("title", ds_name),
         )
+
         class Bounds(NamedTuple):
             left: float
             bottom: float
             right: float
             top: float
+
         # TODO determine and set actual bounds here
         bb = Bounds(0, -90, 360, 90)
         item = pystac.Item(
