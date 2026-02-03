@@ -215,7 +215,9 @@ class NotebookParameters:
                 ),
             )
         )
-        asset = next(a for a in item.assets.values() if "data" in (a.roles or []))
+        asset = next(
+            a for a in item.assets.values() if "data" in (a.roles or [])
+        )
         return xr.open_dataset(stage_in_path / asset.href)
 
     @staticmethod

@@ -106,7 +106,7 @@ def main():
                     "server": {"url": args.xcube_viewer_api_url},
                     "branding": {
                         # "layerVisibilities": {
-                              # Set the default basemap.
+                        #     # Set the default basemap.
                         #     "baseMaps.CartoDB.Dark Matter": True
                         # }
                     },
