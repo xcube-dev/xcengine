@@ -9,6 +9,10 @@ import os
 import pathlib
 import subprocess
 import tempfile
+import threading
+import time
+import urllib
+import webbrowser
 from typing import TypedDict
 
 import click
@@ -223,6 +227,12 @@ def build(
     is_flag=True,
     help="Keep container after it has finished running.",
 )
+@click.option(
+    "-b",
+    "--open-browser",
+    is_flag=True,
+    help="Open a web browser window showing the viewer. Implies --server.",
+)
 @click.argument("image", type=str)
 @click.argument(
     "script_args",
@@ -239,6 +249,7 @@ def run(
     from_saved: bool,
     keep: bool,
     image: str,
+    open_browser: bool,
     output: pathlib.Path,
     script_args,
 ) -> None:
@@ -247,15 +258,20 @@ def run(
         ctx.get_parameter_source("port")
         is not click.core.ParameterSource.DEFAULT
     )
+    server |= open_browser
     actual_port = port if server or port_specified_explicitly else None
+    server_url = f"http://localhost:{actual_port}"
+    viewer_url = f"{server_url}/viewer"
     if actual_port is not None:
-        print(
-            f"xcube server will be available at http://localhost:{actual_port}"
+        print(f"xcube server will be available at {server_url}")
+        print(f"xcube viewer will be available at {viewer_url}")
+    if open_browser:
+        open_browser_thread = threading.Thread(
+            target=open_browser_when_server_up,
+            args=(server_url, viewer_url),
+            daemon=True,
         )
-        print(
-            f"xcube viewer will be available at "
-            f"http://localhost:{actual_port}/viewer"
-        )
+        open_browser_thread.start()
     runner.run(
         run_batch=batch,
         host_port=actual_port,
@@ -263,3 +279,13 @@ def run(
         keep=keep,
         script_args=list(script_args),
     )
+
+
+def open_browser_when_server_up(check_url: str, viewer_url: str) -> None:
+    while True:
+        try:
+            urllib.request.urlopen(check_url)
+            webbrowser.open(viewer_url)
+            break
+        except (urllib.error.URLError, ConnectionResetError):
+            time.sleep(2)
