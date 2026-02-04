@@ -231,7 +231,10 @@ class ImageBuilder:
                     LOGGER.info(f"No environment found at {notebook_sibling}")
                     self.environment = None
 
-    def build(self) -> Image:
+    def build(
+        self,
+        skip_build: bool = False,
+    ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
             with open(self.environment, "r") as fh:
@@ -247,7 +250,8 @@ class ImageBuilder:
         self.add_packages_to_environment(env_def, ["xcube", "pystac"])
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
-        return self._build_image()
+        self.write_dockerfile(self.build_dir / "Dockerfile")
+        return None if skip_build else self._build_image()
 
     @staticmethod
     def export_conda_env() -> dict:
@@ -308,22 +312,6 @@ class ImageBuilder:
 
     def _build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
-        dockerfile = textwrap.dedent("""
-        FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
-        COPY Dockerfile Dockerfile
-        COPY environment.yml environment.yml
-        RUN micromamba install -y -n base -f environment.yml && \
-        micromamba clean --all --yes
-        WORKDIR /home/mambauser
-        COPY user_code.py user_code.py
-        COPY execute.py execute.py
-        COPY parameters.yaml parameters.yaml
-        COPY parameters.py parameters.py
-        COPY util.py util.py
-        ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "python", "/home/mambauser/execute.py"]
-        """)
-        with open(self.build_dir / "Dockerfile", "w") as fh:
-            fh.write(dockerfile)
         LOGGER.info(f"Building image with tag {self.tag}...")
         try:
             image, logs = client.images.build(
@@ -337,6 +325,30 @@ class ImageBuilder:
             sys.exit(1)
         LOGGER.info("Docker image built.")
         return image
+
+    @staticmethod
+    def write_dockerfile(destination: pathlib.Path) -> None:
+        LOGGER.info(f"Writing Dockerfile to {destination}...")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with open(destination, "w") as fh:
+            fh.write(textwrap.dedent("""\
+            FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
+            COPY Dockerfile Dockerfile
+            COPY environment.yml environment.yml
+            RUN micromamba install -y -n base -f environment.yml && \\
+              micromamba clean --all --yes
+            WORKDIR /home/mambauser
+            COPY user_code.py user_code.py
+            COPY execute.py execute.py
+            COPY parameters.yaml parameters.yaml
+            COPY parameters.py parameters.py
+            COPY util.py util.py
+            ENTRYPOINT [ \\
+              "/usr/local/bin/_entrypoint.sh", \\
+              "python", \\
+              "/home/mambauser/execute.py" \\
+            ]
+            """))
 
     def create_cwl(self):
         return self.script_creator.create_cwl(self.tag)
