@@ -338,3 +338,31 @@ def test_image_builder_notebook_config(tmp_path):
     config = image_builder.script_creator.nb_params.config
     assert config["environment_file"] == "my-environment.yml"
     assert config["container_image_tag"] == "my-tag"
+
+
+def test_image_builder_write_dockerfile(tmp_path):
+    ImageBuilder.write_dockerfile(
+        dockerfilepath := tmp_path / "as-yet-nonexistent-dir" / "Dockerfile"
+    )
+    with open(dockerfilepath) as fh:
+        content = fh.read()
+        assert content.startswith("FROM ")
+        assert "\nENTRYPOINT " in content
+
+
+@patch("docker.from_env")
+def test_image_builder_build_skip_build(from_env_mock, tmp_path):
+    build_dir = tmp_path / "build"
+    image_builder = ImageBuilder(
+        pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb",
+        None,
+        build_dir,
+        None,
+    )
+    image_builder.build(skip_build=True)
+    from_env_mock.assert_not_called()
+    env_path = build_dir / "environment.yml"
+    assert env_path.is_file()
+    with open(env_path) as fh:
+        env_dict = yaml.safe_load(fh)
+        assert {"name", "channels", "dependencies"} <= set(env_dict)
