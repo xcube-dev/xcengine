@@ -143,14 +143,12 @@ def test_parameters_get_cwl_step_inputs(notebook_parameters):
 
 
 def test_parameters_from_code(expected_vars):
-    parameters = xcengine.parameters.NotebookParameters.from_code(
-        """
+    parameters = xcengine.parameters.NotebookParameters.from_code("""
 some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
-    """
-    )
+    """)
     assert parameters.params == expected_vars
     assert parameters.config == {}
 

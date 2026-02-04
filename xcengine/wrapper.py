@@ -12,7 +12,6 @@ import pathlib
 import sys
 import util
 
-
 print("CWD", os.getcwd())
 
 import parameters

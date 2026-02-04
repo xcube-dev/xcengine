@@ -54,7 +54,7 @@ class ScriptCreator:
         if clear_output:
             util.clear_directory(output_dir)
         exporter = nbconvert.PythonExporter()
-        (body, resources) = exporter.from_notebook_node(self.notebook)
+        body, resources = exporter.from_notebook_node(self.notebook)
         with open(output_dir / "user_code.py", "w") as fh:
             fh.write(
                 "import unittest.mock\n"
@@ -84,7 +84,7 @@ class ScriptCreator:
             setup_node = nbformat.from_dict(self.notebook)
             setup_node.cells = setup_node.cells[:params_cell_index]
             exporter = nbconvert.PythonExporter()
-            (setup_code, _) = exporter.from_notebook_node(setup_node)
+            setup_code, _ = exporter.from_notebook_node(setup_node)
             # Mock out the get_ipython function in case there are any IPython
             # magic commands in the notebook. This effectively turns them into
             # no-ops.
@@ -94,7 +94,7 @@ class ScriptCreator:
             )
             params_node = nbformat.from_dict(self.notebook)
             params_node.cells = [params_node.cells[params_cell_index]]
-            (params_code, _) = exporter.from_notebook_node(params_node)
+            params_code, _ = exporter.from_notebook_node(params_node)
             self.nb_params = NotebookParameters.from_code(
                 params_code,
                 setup_code=setup_code,
@@ -308,8 +308,7 @@ class ImageBuilder:
 
     def _build_image(self) -> docker.models.images.Image:
         client = docker.from_env()
-        dockerfile = textwrap.dedent(
-            """
+        dockerfile = textwrap.dedent("""
         FROM mambaorg/micromamba:1.5.10-noble-cuda-12.6.0
         COPY Dockerfile Dockerfile
         COPY environment.yml environment.yml
@@ -322,8 +321,7 @@ class ImageBuilder:
         COPY parameters.py parameters.py
         COPY util.py util.py
         ENTRYPOINT ["/usr/local/bin/_entrypoint.sh", "python", "/home/mambauser/execute.py"]
-        """
-        )
+        """)
         with open(self.build_dir / "Dockerfile", "w") as fh:
             fh.write(dockerfile)
         LOGGER.info(f"Building image with tag {self.tag}...")

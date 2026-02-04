@@ -158,6 +158,7 @@ def test_image_run_open_browser(urlopen_mock, open_mock, runner_mock):
 
     count = 0
     passed_url = None
+
     def urlopen(url):
         nonlocal count, passed_url
         passed_url = url

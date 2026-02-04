@@ -32,7 +32,7 @@ logging.basicConfig(level=logging.INFO)
     "-v",
     "--verbose",
     count=True,
-    help="Increase the verbosity of the log messages."
+    help="Increase the verbosity of the log messages.",
 )
 def cli(verbose):
     if verbose > 0:
