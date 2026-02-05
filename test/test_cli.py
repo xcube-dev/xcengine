@@ -1,3 +1,4 @@
+import pathlib
 import re
 import urllib
 from unittest.mock import patch, ANY, MagicMock
@@ -86,7 +87,7 @@ def test_image_build(builder_mock, tmp_path, specify_dir, specify_env):
         tag=tag,
         build_dir=(build_dir if specify_dir else ANY),
     )
-    instance_mock.build.assert_called_once_with()
+    instance_mock.build.assert_called_once_with(skip_build=False)
 
 
 @patch("xcengine.cli.ContainerRunner")
@@ -180,3 +181,25 @@ def test_image_run_open_browser(urlopen_mock, open_mock, runner_mock):
     assert count == 2
     assert passed_url == f"http://localhost:{port}"
     open_mock.assert_called_once_with(f"http://localhost:{port}/viewer")
+
+@patch("docker.from_env")
+def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
+    build_dir = tmp_path / "build"
+    nb_path = pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
+    cli_runner = CliRunner()
+    result = cli_runner.invoke(
+        cli,
+        [
+            "image",
+            "build",
+            "--skip-build",
+            "--build-dir",
+            str(build_dir),
+            str(nb_path),
+        ],
+    )
+    assert result.exit_code == 0
+    assert (build_dir / "Dockerfile").is_file()
+    assert (build_dir / "environment.yml").is_file()
+    from_env_mock.assert_not_called()
+
