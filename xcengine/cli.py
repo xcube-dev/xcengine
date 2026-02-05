@@ -146,6 +146,13 @@ def image_cli():
     help="Write a CWL file defining an Earth Observation Application Package "
     "to the specified path.",
 )
+@click.option(
+    "-s",
+    "--skip-build",
+    is_flag=True,
+    help="Prepare the Dockerfile and build context, but don't actually build "
+    "the image"
+)
 @notebook_argument
 def build(
     build_dir: pathlib.Path,
@@ -153,6 +160,7 @@ def build(
     environment: pathlib.Path,
     tag: str,
     eoap: pathlib.Path,
+    skip_build: bool
 ) -> None:
     if environment is None:
         LOGGER.info("No environment file specified on command line.")
@@ -166,13 +174,13 @@ def build(
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
-        image = image_builder.build()
+        image = image_builder.build(skip_build=skip_build)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_builder = ImageBuilder(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
-            image = image_builder.build()
+            image = image_builder.build(skip_build=skip_build)
     if eoap:
 
         class IndentDumper(yaml.Dumper):
@@ -186,7 +194,11 @@ def build(
                 Dumper=IndentDumper,
             )
         )
-    print(f"Built image with tags {image.tags}")
+    print(
+        f"Built image with tags {image.tags}"
+        if image is not None else
+        "No image built"
+    )
 
 
 @image_cli.command(
