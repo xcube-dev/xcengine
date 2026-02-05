@@ -233,7 +233,7 @@ def build(
     help="Keep container after it has finished running.",
 )
 @click.option(
-    "-b",
+    "-w",
     "--open-browser",
     is_flag=True,
     help="After the server has started, open a web browser window "
