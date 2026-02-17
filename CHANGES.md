@@ -7,7 +7,7 @@
 * Improve type annotations and checks (#68)
 * Include Dockerfile in built images (#55)
 * Look for environment.yml automatically (#41)
-* Allow `xcengine image run` to pass arguments to the container (#57)
+* Allow `xcengine image run` to pass arguments to the container (#57, #77)
 * Add option for `xcengine image run` to open a browser window (#58)
 
 ## Changes in 0.1.1
