@@ -129,7 +129,11 @@ def test_runner_run_keep(keep: bool):
         container.remove.assert_called_once_with(force=True)
 
 
-def test_runner_extra_args():
+@pytest.mark.parametrize(
+    "script_args", [None, [], ["--foo", "--bar", "42", "--baz", "somestring"]]
+)
+@pytest.mark.parametrize("run_batch", [False, True])
+def test_runner_extra_args(script_args: list[str] | None, run_batch: bool):
     runner = xcengine.core.ContainerRunner(
         image := Mock(docker.models.images.Image),
         None,
@@ -138,17 +142,21 @@ def test_runner_extra_args():
     image.tags = []
     client.containers.run.return_value = (container := MagicMock(Container))
     container.status = "exited"
-    script_args = ["--foo", "--bar", "42", "--baz", "somestring"]
     runner.run(
-        run_batch=False,
+        run_batch=run_batch,
         host_port=None,
         from_saved=False,
         keep=False,
         script_args=script_args,
     )
     run_args = client.containers.run.call_args
+    expected_run_args = ["--batch"] if run_batch else []
+    expected_script_args = [] if script_args is None else script_args
     command = run_args[1]["command"]
-    assert command == ["python", "execute.py"] + script_args
+    assert (
+        command
+        == ["python", "execute.py"] + expected_run_args + expected_script_args
+    )
 
 
 def test_runner_sigint():
