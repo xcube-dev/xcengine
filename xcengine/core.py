@@ -392,9 +392,7 @@ class ContainerRunner:
                 else []
             )
             + (["--from-saved"] if from_saved else [])
-            + script_args
-            if script_args is not None
-            else []
+            + (script_args if script_args is not None else [])
         )
         run_args: dict[str, Any] = dict(
             image=self.image, command=command, remove=False, detach=True
