@@ -32,7 +32,7 @@ to provide a path to a shell as a command, since this path will just be passed
 as a parameter to the xcengine runner script. You need to set the entry point
 as well, like this:
 
-`docker --rm -it --entrypoint /usr/local/bin/_entrypoint.sh myimage:1 bash`
+`docker run --rm -it --entrypoint /usr/local/bin/_entrypoint.sh myimage:1 bash`
 
 This resets the entry point to the usual micromamba-docker entry point, which
 sets up the Python environment, then runs bash within that environment.
