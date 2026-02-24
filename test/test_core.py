@@ -404,3 +404,6 @@ def test_image_builder_build_dir(from_env_mock, tmp_path, set_env, skip_build):
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]
         assert set(output_env["dependencies"]) >= set(env_def["dependencies"])
+
+    cwl = image_builder.create_cwl()
+    assert "cwlVersion" in cwl
