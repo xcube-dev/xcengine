@@ -1,11 +1,22 @@
+import logging
 import os
+import sys
+from collections import namedtuple
 from pathlib import Path
+from unittest import mock
+from unittest.mock import patch
 
 import pystac
 import pytest
 import xarray as xr
+from xcube.server.webservers.tornado import TornadoFramework
 
-from xcengine.util import clear_directory, write_stac, save_datasets
+from xcengine.util import (
+    clear_directory,
+    write_stac,
+    save_datasets,
+)
+import xcengine.util
 
 
 @pytest.fixture
@@ -86,3 +97,30 @@ def test_save_datasets(tmp_path, dataset, eoap_mode, ds2_format):
         assert catalogue_path.is_file()
     else:
         assert not catalogue_path.exists()
+
+
+def test_start_server():
+    import xcube.core.new
+
+    framework_patch = mock.MagicMock()
+    framework_patch.get_framework_class.return_value = TornadoFramework
+    server_object_patch = mock.MagicMock()
+    server_module_patch = mock.MagicMock()
+    server_module_patch.Server.return_value = server_object_patch
+    with patch.dict(
+        sys.modules,
+        {
+            "xcube.server.framework": framework_patch,
+            "xcube.server.server": server_module_patch,
+        },
+    ):
+        xcengine.util.start_server(
+            {"ds1": xcube.core.new.new_cube()},
+            {},
+            namedtuple("Args", "batch from_saved xcube_viewer_api_url")(
+                False, False, "http://localhost:8000/"
+            ),
+            logging.getLogger(),
+        )
+
+    server_object_patch.start.assert_called_once()
