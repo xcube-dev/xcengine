@@ -5,7 +5,6 @@
 # https://opensource.org/licenses/MIT.
 
 
-import json
 import logging
 import os
 import pathlib
@@ -20,9 +19,9 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-def __xce_set_params():
+def __xce_set_params(config_locator: str | pathlib.Path = sys.argv[0]):
     params = parameters.NotebookParameters.from_yaml_file(
-        pathlib.Path(sys.argv[0]).parent / "parameters.yaml"
+        pathlib.Path(config_locator).parent / "parameters.yaml"
     )
     globals().update(params.read_params_combined(sys.argv))
 
@@ -42,8 +41,6 @@ import argparse
 import pathlib
 
 import xarray as xr
-from xcube.server.server import Server
-from xcube.server.framework import get_framework_class
 import xcube.util.plugin
 import xcube.core.new
 import xcube.webapi.viewer
@@ -80,41 +77,7 @@ def main():
         )
 
     if args.server:
-        xcube.util.plugin.init_plugins()
-        server = Server(framework=get_framework_class("tornado")(), config={})
-        dataset_context = server.ctx.get_api_ctx("datasets")
-        for name in datasets:
-            dataset = (
-                xr.open_zarr(saved_datasets[name])
-                if args.batch and args.from_saved
-                else datasets[name]
-            )
-            dataset_context.add_dataset(dataset, name, style="bar")
-            LOGGER.info("Added " + name)
-        logo_data = (
-            pathlib.Path(xcube.webapi.viewer.__file__).parent
-            / "dist"
-            / "images"
-            / "logo.png"
-        ).read_bytes()
-
-        viewer_context = server.ctx.get_api_ctx("viewer")
-        viewer_context.config_items = {
-            "config.json": json.dumps(
-                {
-                    "server": {"url": args.xcube_viewer_api_url},
-                    "branding": {
-                        # "layerVisibilities": {
-                        #     # Set the default basemap.
-                        #     "baseMaps.CartoDB.Dark Matter": True
-                        # }
-                    },
-                }
-            ),
-            "images/logo.png": logo_data,
-        }
-        LOGGER.info(f"Starting server on port {server.ctx.config['port']}...")
-        server.start()
+        util.start_server(datasets, saved_datasets, args, LOGGER)
 
 
 if __name__ == "__main__":

@@ -2,11 +2,11 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
-from collections import namedtuple
 from datetime import datetime
+import json
 import pathlib
 import shutil
-from typing import NamedTuple, Any, Mapping
+from typing import NamedTuple, Mapping
 
 import pystac
 import xarray as xr
@@ -122,3 +122,46 @@ def save_datasets(
     if eoap_mode:
         write_stac(datasets, output_path)
     return saved_datasets
+
+
+def start_server(datasets, saved_datasets, args, logger):
+    import xcube.util.plugin
+    import xcube.webapi.viewer
+    from xcube.server.server import Server
+    from xcube.server.framework import get_framework_class
+
+    xcube.util.plugin.init_plugins()
+    server = Server(framework=get_framework_class("tornado")(), config={})
+    dataset_context = server.ctx.get_api_ctx("datasets")
+    for name in datasets:
+        dataset = (
+            xr.open_zarr(saved_datasets[name])
+            if args.batch and args.from_saved
+            else datasets[name]
+        )
+        dataset_context.add_dataset(dataset, name, style="bar")
+        logger.info("Added " + name)
+    logo_data = (
+        pathlib.Path(xcube.webapi.viewer.__file__).parent
+        / "dist"
+        / "images"
+        / "logo.png"
+    ).read_bytes()
+
+    viewer_context = server.ctx.get_api_ctx("viewer")
+    viewer_context.config_items = {
+        "config.json": json.dumps(
+            {
+                "server": {"url": args.xcube_viewer_api_url},
+                "branding": {
+                    # "layerVisibilities": {
+                    #     # Set the default basemap.
+                    #     "baseMaps.CartoDB.Dark Matter": True
+                    # }
+                },
+            }
+        ),
+        "images/logo.png": logo_data,
+    }
+    logger.info(f"Starting server on port {server.ctx.config['port']}...")
+    server.start()
