@@ -371,7 +371,12 @@ def test_image_builder_write_dockerfile(tmp_path):
 
 @patch("docker.from_env")
 @pytest.mark.parametrize("set_env", [False, True])
-def test_image_builder_build_skip_build(from_env_mock, tmp_path, set_env):
+@pytest.mark.parametrize("skip_build", [False, True])
+def test_image_builder_build_dir(from_env_mock, tmp_path, set_env, skip_build):
+    client_mock = Mock(docker.client.DockerClient)
+    client_mock.images.build.return_value = None, None
+    from_env_mock.return_value = client_mock
+
     build_dir = tmp_path / "build"
     env_path = tmp_path / "env2.yaml"
     env_def = {
@@ -386,8 +391,11 @@ def test_image_builder_build_skip_build(from_env_mock, tmp_path, set_env):
         build_dir,
         None,
     )
-    image_builder.build(skip_build=True)
-    from_env_mock.assert_not_called()
+    image_builder.build(skip_build=skip_build)
+    if skip_build:
+        from_env_mock.assert_not_called()
+    else:
+        client_mock.images.build.assert_called()
     env_path = build_dir / "environment.yml"
     assert env_path.is_file()
     output_env = yaml.safe_load(env_path.read_text())
