@@ -10,6 +10,7 @@
 * Allow `xcengine image run` to pass arguments to the container (#57, #77)
 * Add option for `xcengine image run` to open a browser window (#58)
 * Add option to skip image build and just create Dockerfile and context (#60)
+* Refactor code and improve test coverage (#40)
 
 ## Changes in 0.1.1
 

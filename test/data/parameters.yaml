@@ -1,0 +1,9 @@
+foo:
+  default: 10
+  type: int
+bar:
+  default: 20
+  type: int
+baz:
+  default: 30
+  type: int
