@@ -50,7 +50,8 @@ def test_clear_directory(tmp_path):
 
 
 @pytest.mark.parametrize("write_datasets", [False, True])
-def test_write_stac(tmp_path, dataset, write_datasets):
+@pytest.mark.parametrize("pre_existing_catalog", [False, True])
+def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
     datasets = {"ds1": dataset, "ds2": dataset.copy()}
     datasets["ds2"].attrs["xcengine_output_format"] = "netcdf"
     if write_datasets:
@@ -58,20 +59,30 @@ def test_write_stac(tmp_path, dataset, write_datasets):
         output_path.mkdir()
         datasets["ds1"].to_zarr(output_path / ("ds1.zarr"))
         datasets["ds2"].to_netcdf(output_path / ("ds2.nc"))
-
+    catalog_path = tmp_path / "catalog.json"
+    if pre_existing_catalog:
+        catalog_path.touch()
     write_stac(datasets, tmp_path)
-    catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
-    items = set(catalog.get_items(recursive=True))
-    assert {item.id for item in items} == datasets.keys()
-    catalog.make_all_asset_hrefs_absolute()
-    data_asset_hrefs = {
-        item.id: [a.href for a in item.assets.values() if "data" in a.roles]
-        for item in items
-    }
-    assert data_asset_hrefs == {
-        "ds1": [str((tmp_path / "ds1" / "ds1.zarr").resolve(strict=False))],
-        "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
-    }
+    if pre_existing_catalog:
+        # Check that our fake catalogue was not overwritten
+        assert catalog_path.stat().st_size == 0
+    else:
+        catalog = pystac.Catalog.from_file(catalog_path)
+        items = set(catalog.get_items(recursive=True))
+        assert {item.id for item in items} == datasets.keys()
+        catalog.make_all_asset_hrefs_absolute()
+        data_asset_hrefs = {
+            item.id: [
+                a.href for a in item.assets.values() if "data" in a.roles
+            ]
+            for item in items
+        }
+        assert data_asset_hrefs == {
+            "ds1": [
+                str((tmp_path / "ds1" / "ds1.zarr").resolve(strict=False))
+            ],
+            "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
+        }
 
 
 @pytest.mark.parametrize("eoap_mode", [False, True])
