@@ -208,6 +208,25 @@ def test_runner_sigint():
     assert container.status == "stopped"
 
 
+def test_runner_extract_output_from_container(tmp_path):
+    runner = xcengine.core.ContainerRunner(
+        image := Mock(docker.models.images.Image),
+        tmp_path,
+        client := Mock(DockerClient),
+    )
+    image.tags = []
+
+    def byte_generator():
+        b = (pathlib.Path(__file__).parent / "data" / "data.tar").read_bytes()
+        yield b
+
+    container = MagicMock()
+    container.get_archive.return_value = byte_generator(), None
+    client.containers.run.return_value = container
+    runner.run(False, 8080, False, False)
+    assert (tmp_path / "foo").read_text() == "bar\n"
+
+
 @patch("xcengine.core.subprocess.run")
 def test_pip(mock_run):
     pip_output = {
