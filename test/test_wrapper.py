@@ -5,7 +5,9 @@ import pytest
 import xcengine
 
 
-@pytest.mark.parametrize("cli_args", [["--verbose"], ["--batch"]])
+@pytest.mark.parametrize(
+    "cli_args", [["--verbose"], ["--batch"], ["--server"]]
+)
 def test_wrapper(tmp_path, monkeypatch, cli_args):
 
     with patch("sys.argv", ["wrapper.py"] + cli_args):
@@ -16,11 +18,18 @@ def test_wrapper(tmp_path, monkeypatch, cli_args):
         os.environ["XC_USER_CODE_PATH"] = str(user_code_path)
         from xcengine import wrapper
 
-        with patch("util.save_datasets", save_datasets_mock := Mock()):
+        with (
+            patch("util.save_datasets", save_datasets_mock := Mock()),
+            patch("util.start_server", start_server_mock := Mock()),
+        ):
             xcengine.wrapper.main()
 
         assert save_datasets_mock.call_count == (
             1 if "--batch" in cli_args else 0
+        )
+
+        assert start_server_mock.call_count == (
+            1 if "--server" in cli_args else 0
         )
 
 
