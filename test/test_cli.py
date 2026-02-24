@@ -3,6 +3,7 @@ import re
 import urllib
 from unittest.mock import patch, ANY, MagicMock
 import pytest
+import yaml
 from click.testing import CliRunner
 
 from xcengine.cli import cli
@@ -64,19 +65,26 @@ def test_make_script(
 
 @pytest.mark.parametrize("specify_dir", [False, True])
 @pytest.mark.parametrize("specify_env", [False, True])
+@pytest.mark.parametrize("specify_eoap", [False, True])
 @patch("xcengine.cli.ImageBuilder")
-def test_image_build(builder_mock, tmp_path, specify_dir, specify_env):
+def test_image_build(
+    builder_mock, tmp_path, specify_dir, specify_env, specify_eoap
+):
     (nb_path := tmp_path / "foo.ipynb").touch()
     (env_path := tmp_path / "environment.yml").touch()
     (build_dir := tmp_path / "build").mkdir()
+    eoap_path = tmp_path / "eoap.yaml"
     runner = CliRunner()
     tag = "foo"
     instance_mock = builder_mock.return_value = MagicMock()
+    cwl = {"foo": 42}
+    instance_mock.create_cwl.return_value = cwl
     result = runner.invoke(
         cli,
         ["image", "build", "--tag", tag]
         + (["--build-dir", str(build_dir)] if specify_dir else [])
         + (["--environment", str(env_path)] if specify_env else [])
+        + (["--eoap", str(eoap_path)] if specify_eoap else [])
         + [str(nb_path)],
     )
     assert result.output.startswith("Built image")
@@ -88,6 +96,8 @@ def test_image_build(builder_mock, tmp_path, specify_dir, specify_env):
         build_dir=(build_dir if specify_dir else ANY),
     )
     instance_mock.build.assert_called_once_with(skip_build=False)
+    if specify_eoap:
+        assert yaml.safe_load(eoap_path.read_text()) == cwl
 
 
 @patch("xcengine.cli.ContainerRunner")
@@ -182,6 +192,7 @@ def test_image_run_open_browser(urlopen_mock, open_mock, runner_mock):
     assert passed_url == f"http://localhost:{port}"
     open_mock.assert_called_once_with(f"http://localhost:{port}/viewer")
 
+
 @patch("docker.from_env")
 def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     build_dir = tmp_path / "build"
@@ -202,4 +213,3 @@ def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     assert (build_dir / "Dockerfile").is_file()
     assert (build_dir / "environment.yml").is_file()
     from_env_mock.assert_not_called()
-
