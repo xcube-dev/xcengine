@@ -351,11 +351,19 @@ def test_image_builder_write_dockerfile(tmp_path):
 
 
 @patch("docker.from_env")
-def test_image_builder_build_skip_build(from_env_mock, tmp_path):
+@pytest.mark.parametrize("set_env", [False, True])
+def test_image_builder_build_skip_build(from_env_mock, tmp_path, set_env):
     build_dir = tmp_path / "build"
+    env_path = tmp_path / "env2.yaml"
+    env_def = {
+        "name": "foo",
+        "channels": "bar",
+        "dependencies": ["python >=3.13", "baz >=42.0"],
+    }
+    env_path.write_text(yaml.safe_dump(env_def))
     image_builder = ImageBuilder(
         pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb",
-        None,
+        env_path if set_env else None,
         build_dir,
         None,
     )
@@ -363,6 +371,9 @@ def test_image_builder_build_skip_build(from_env_mock, tmp_path):
     from_env_mock.assert_not_called()
     env_path = build_dir / "environment.yml"
     assert env_path.is_file()
-    with open(env_path) as fh:
-        env_dict = yaml.safe_load(fh)
-        assert {"name", "channels", "dependencies"} <= set(env_dict)
+    output_env = yaml.safe_load(env_path.read_text())
+    assert {"name", "channels", "dependencies"} <= set(output_env)
+    if set_env:
+        assert output_env["name"] == env_def["name"]
+        assert output_env["channels"] == env_def["channels"]
+        assert set(output_env["dependencies"]) >= set(env_def["dependencies"])
