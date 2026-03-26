@@ -17,7 +17,7 @@ Pontus Lurcock, Tejas Morbagal Harish, and Alicja Balfanz,
 "Application packages in the xcube ecosystem".
 [Course page](https://xcube-dev.github.io/summerschool25/) with links to
 slides, documentation, and hands-on exercises.
-[Video recording of presentation](https://www.youtube.com/watch?v=b3BdOE3mJZU).
+Video recordings of the presentation [on the TIB AV Portal](https://av.tib.eu/media/72374) and [YouTube](https://www.youtube.com/watch?v=b3BdOE3mJZU).
 
 - Presentation at ESA Big Data from Space 2025, Riga.
 Yogesh Baljeet Singh, Norman Fomferra, Pontus Lurcock, Gunnar Brandt and
