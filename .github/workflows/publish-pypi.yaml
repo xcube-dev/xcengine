@@ -30,4 +30,4 @@ jobs:
       - name: Upload to PyPI
         shell: bash -el {0}
         run: |
-          python3 -m twine upload --username __token__ --password ${{ secrets.PYPI_TOKEN }} dist/*
+          python3 -m twine upload --verbose --username __token__ --password ${{ secrets.PYPI_TOKEN }} dist/*
