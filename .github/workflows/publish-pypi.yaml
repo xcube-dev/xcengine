@@ -1,0 +1,33 @@
+name: publish-pypi
+
+on:
+  release:
+    types: [released]
+  workflow_dispatch:
+
+jobs:
+  publish-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v6.0.3
+      - uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-file: environment.yml
+          init-shell: >-
+            bash
+          cache-environment: false
+          create-args: python-build twine
+          post-cleanup: 'all'
+      - name: Build packages
+        shell: bash -el {0}
+        run: |
+          python3 -m build
+      - name: Check build
+        shell: bash -el {0}
+        run: |
+          python3 -m twine check dist/*
+      - name: Upload to PyPI
+        shell: bash -el {0}
+        run: |
+          python3 -m twine upload --username __token__ --password ${{ secrets.PYPI_TOKEN }} dist/*
