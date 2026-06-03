@@ -1,4 +1,4 @@
-## Changes in 0.1.2 (in development)
+## Changes in 0.1.2
 
 * Improve handling of environment file specification (#63)
 * Stop running container on SIGINT (#62)
