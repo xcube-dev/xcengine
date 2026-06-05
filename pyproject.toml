@@ -57,6 +57,7 @@ dev = [
   "cwltool",
   "pytest",
   "pytest-cov",
+  "pytest-httpserver",
   "pytz"
 ]
 doc = [

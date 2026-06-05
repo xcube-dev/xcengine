@@ -23,6 +23,7 @@ import docker
 from docker.errors import BuildError
 from docker.models.containers import Container
 from docker.models.images import Image
+import fsspec
 import nbconvert
 import nbformat
 import yaml
@@ -37,13 +38,19 @@ logging.basicConfig(level=logging.INFO)
 class ScriptCreator:
     """Turn a Jupyter notebook into a set of scripts"""
 
-    nb_path: pathlib.Path
+    nb_path: pathlib.Path | str
     notebook: nbformat.NotebookNode
     nb_params: NotebookParameters = NotebookParameters({})
 
-    def __init__(self, nb_path: pathlib.Path):
+    def __init__(self, nb_path: pathlib.Path | str):
+        """
+        Instantiate a ScriptCreator for a specified notebook
+
+        :param nb_path: filesystem path or fsspec-parseable specifier
+          (e.g. HTTP URL) to the input notebook
+        """
         self.nb_path = nb_path
-        with open(nb_path) as fh:
+        with fsspec.open(str(nb_path)) as fh:
             self.notebook = nbformat.read(fh, as_version=4)
         self.process_params_cell()
 

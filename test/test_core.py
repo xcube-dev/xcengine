@@ -351,6 +351,16 @@ def test_script_creator_notebook_config():
     assert config["container_image_tag"] == "my-tag"
 
 
+def test_script_creator_notebook_config_http(httpserver):
+    http_path = "/mynotebook.ipynb"
+    nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    httpserver.expect_request(http_path).respond_with_data(nb_path.read_bytes())
+    script_creator = ScriptCreator(httpserver.url_for(http_path))
+    config = script_creator.nb_params.config
+    assert config["environment_file"] == "my-environment.yml"
+    assert config["container_image_tag"] == "my-tag"
+
+
 def test_image_builder_notebook_config(tmp_path):
     nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
     image_builder = ImageBuilder(nb_path, None, tmp_path, None)

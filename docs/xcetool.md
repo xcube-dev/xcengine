@@ -13,9 +13,12 @@ details on usage and available options.
 
 Usage: `xcetool image build [OPTIONS] NOTEBOOK`
 
-This is the main `xcetool` subcommand: it builds a container image from a supplied
-notebook and environment file. If given the `--eoap` argument, it also generates
-a CWL file defining a corresponding application package.
+This is the main `xcetool` subcommand: it builds a container image from a
+supplied notebook and environment file. If given the `--eoap` argument, it also
+generates  a CWL file defining a corresponding application package. The
+NOTEBOOK argument can be a path to a local file, a URL, or any other string
+which can be parsed by the [fsspec](https://filesystem-spec.readthedocs.io/)
+library.
 
 Options:
 
