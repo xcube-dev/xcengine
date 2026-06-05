@@ -1,3 +1,5 @@
+## Changes in 0.1.3 (in development)
+
 ## Changes in 0.1.2
 
 * Improve handling of environment file specification (#63)
