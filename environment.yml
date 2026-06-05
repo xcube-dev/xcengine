@@ -18,6 +18,7 @@ dependencies:
   - cwltool
   - pytest
   - pytest-cov
+  - pytest-httpserver
   - pytz
 
 # Note: xcube is not required for the conversion itself, but is required
