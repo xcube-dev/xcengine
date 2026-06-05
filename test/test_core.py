@@ -380,24 +380,41 @@ def test_image_builder_write_dockerfile(tmp_path):
 
 
 @patch("docker.from_env")
-@pytest.mark.parametrize("set_env", [False, True])
+@pytest.mark.parametrize("env_type", ["none", "local", "http"])
 @pytest.mark.parametrize("skip_build", [False, True])
-def test_image_builder_build_dir(from_env_mock, tmp_path, set_env, skip_build):
+def test_image_builder_build_dir(
+        from_env_mock,
+        tmp_path,
+        httpserver,
+        env_type,
+        skip_build
+):
     client_mock = Mock(docker.client.DockerClient)
     client_mock.images.build.return_value = None, None
     from_env_mock.return_value = client_mock
 
     build_dir = tmp_path / "build"
-    env_path = tmp_path / "env2.yaml"
+    build_env_path = tmp_path / "env2.yaml"
     env_def = {
         "name": "foo",
         "channels": "bar",
         "dependencies": ["python >=3.13", "baz >=42.0"],
     }
-    env_path.write_text(yaml.safe_dump(env_def))
+    build_env_path.write_text(yaml.safe_dump(env_def))
+    env_http = "/env2.yaml"
+
+    match env_type:
+        case "none": env_param = None
+        case "local": env_param = build_env_path
+        case "http":
+            httpserver.expect_request(env_http).respond_with_data(build_env_path.read_bytes())
+            env_param = httpserver.url_for(env_http)
+        case _:
+            raise RuntimeError(f"Unknown env type {env_type}")
+
     image_builder = ImageBuilder(
         pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb",
-        env_path if set_env else None,
+        env_param,
         build_dir,
         None,
     )
@@ -406,11 +423,11 @@ def test_image_builder_build_dir(from_env_mock, tmp_path, set_env, skip_build):
         from_env_mock.assert_not_called()
     else:
         client_mock.images.build.assert_called()
-    env_path = build_dir / "environment.yml"
-    assert env_path.is_file()
-    output_env = yaml.safe_load(env_path.read_text())
+    build_env_path = build_dir / "environment.yml"
+    assert build_env_path.is_file()
+    output_env = yaml.safe_load(build_env_path.read_text())
     assert {"name", "channels", "dependencies"} <= set(output_env)
-    if set_env:
+    if env_type != "none":
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]
         assert set(output_env["dependencies"]) >= set(env_def["dependencies"])

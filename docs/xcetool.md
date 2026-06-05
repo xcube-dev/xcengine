@@ -6,8 +6,8 @@ The command-line interface to xcengine is the command `xcetool`, which
 implements multiple subcommands and options for building and running
 container images and Application Packages.
 
-You can use the `--help` flag for any `xcetool` command or subcommand to get more
-details on usage and available options.
+You can use the `--help` flag for any `xcetool` command or subcommand to get
+more  details on usage and available options.
 
 ### `xcetool image build`
 
@@ -16,9 +16,9 @@ Usage: `xcetool image build [OPTIONS] NOTEBOOK`
 This is the main `xcetool` subcommand: it builds a container image from a
 supplied notebook and environment file. If given the `--eoap` argument, it also
 generates  a CWL file defining a corresponding application package. The
-NOTEBOOK argument can be a path to a local file, a URL, or any other string
-which can be parsed by the [fsspec](https://filesystem-spec.readthedocs.io/)
-library.
+NOTEBOOK argument can be a path to a local file, an HTTP URL, or any other
+string which can be parsed by the
+[fsspec](https://filesystem-spec.readthedocs.io/) library.
 
 Options:
 
@@ -28,6 +28,8 @@ Options:
     This option is mainly useful for debugging.
 -   `-e`, `--environment` `FILE`:
     Conda environment file to use in Docker image.
+    This can be a path to a local file, an HTTP URL, or any other string which
+    can be parsed by the fsspec library.
     If no environment file is specified here or in the notebook,
     xcetool will look for a file called `environment.yml`
     in the notebook's directory. If all else fails,

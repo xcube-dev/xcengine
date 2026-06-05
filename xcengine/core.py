@@ -187,12 +187,12 @@ class ImageBuilder:
     """
 
     tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
-    environment: pathlib.Path | None = None
+    environment: pathlib.Path | str | None = None
 
     def __init__(
         self,
-        notebook: pathlib.Path,
-        environment: pathlib.Path | None,
+        notebook: pathlib.Path | str,
+        environment: pathlib.Path | str | None,
         build_dir: pathlib.Path,
         tag: str | None,
     ):
@@ -244,7 +244,7 @@ class ImageBuilder:
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
-            with open(self.environment, "r") as fh:
+            with fsspec.open(self.environment, "r") as fh:
                 env_def = yaml.safe_load(fh)
         else:
             LOGGER.warning(
