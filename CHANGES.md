@@ -1,5 +1,8 @@
 ## Changes in 0.1.3 (in development)
 
+* Allow HTTP URLs and other fsspec-supported specifiers as notebook and
+  environment file paths (#42)
+
 ## Changes in 0.1.2
 
 * Improve handling of environment file specification (#63)
