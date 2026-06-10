@@ -8,10 +8,8 @@ import pathlib
 import shutil
 from typing import NamedTuple, Mapping
 
-import pystac
 import xarray as xr
 from xarray import Dataset
-
 
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
@@ -24,6 +22,12 @@ def clear_directory(directory: pathlib.Path) -> None:
 def write_stac(
     datasets: Mapping[str, xr.Dataset], stac_root: pathlib.Path
 ) -> None:
+    try:
+        import pystac
+    except ModuleNotFoundError:
+        # If pystac isn't present, we assume that stage-out is not required
+        # and exit quietly.
+        return
     catalog_path = stac_root / "catalog.json"
     if catalog_path.exists():
         # Assume that the user code generated its own stage-out data
