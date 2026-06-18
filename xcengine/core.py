@@ -241,6 +241,8 @@ class ImageBuilder:
     def build(
         self,
         skip_build: bool = False,
+        with_eoap: bool = True,
+        with_xcube: bool = True,
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
@@ -254,7 +256,11 @@ class ImageBuilder:
             )
             env_def = self.export_conda_env()
         # We need xcube for server/viewer and pystac for EOAP stage-in/out
-        self.add_packages_to_environment(env_def, ["xcube", "pystac"])
+        self.add_packages_to_environment(
+            env_def,
+            (["xcube"] if with_xcube else [])
+            + (["pystac"] if with_eoap else []),
+        )
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
         self.write_dockerfile(self.build_dir / "Dockerfile")
