@@ -1,7 +1,8 @@
 # Copyright (c) 2024-2026 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
-
+import argparse
+import logging
 from datetime import datetime
 import json
 import pathlib
@@ -128,11 +129,21 @@ def save_datasets(
     return saved_datasets
 
 
-def start_server(datasets, saved_datasets, args, logger):
-    import xcube.util.plugin
-    import xcube.webapi.viewer
-    from xcube.server.server import Server
-    from xcube.server.framework import get_framework_class
+def start_server(
+        datasets: Mapping[str, xr.Dataset],
+        saved_datasets: dict[str, pathlib.Path],
+        args: argparse.Namespace,
+        logger: logging.Logger
+):
+    try:
+        import xcube.util.plugin
+        import xcube.webapi.viewer
+        from xcube.server.server import Server
+        from xcube.server.framework import get_framework_class
+    except ImportError as e:
+        logger.info(e.msg)
+        logger.info("Not starting server, since xcube not available")
+        return
 
     xcube.util.plugin.init_plugins()
     server = Server(framework=get_framework_class("tornado")(), config={})

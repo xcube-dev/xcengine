@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import sys
@@ -85,17 +86,19 @@ def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
         }
 
 
-orig_import = __import__
-def import_mock(name, *args):
-    if name == 'pystac':
-        raise ModuleNotFoundError("No module named 'pystac'")
-    return orig_import(name, *args)
+
 
 
 def test_write_stac_no_pystac(tmp_path, dataset):
     # Import hooks are the recommended "clean" way to do this, but don't work
     # in this case.
-    with mock.patch('builtins.__import__', side_effect=import_mock):
+    orig_import = __import__
+    def import_mock(name, *args):
+        if name == "pystac":
+            raise ModuleNotFoundError("No module named 'pystac'")
+        return orig_import(name, *args)
+
+    with mock.patch("builtins.__import__", side_effect=import_mock):
         # pytest imports xcengine.util long before we can patch __import__,
         # so we delete pystac from util's namespace (if present) instead.
         # This gives a NameError on access rather than a ModuleNotFoundError
@@ -106,6 +109,36 @@ def test_write_stac_no_pystac(tmp_path, dataset):
         from xcengine.util import write_stac
         write_stac({"ds1": dataset}, tmp_path)
         # We want nothing to happen here, so no explicit assertions.
+
+
+def test_start_server_no_xcube(dataset):
+    import io
+    orig_import = __import__
+    def import_mock(name, *args):
+        if name == "xcube" or name.startswith("xcube."):
+            raise ModuleNotFoundError(f"No module named {name}")
+        return orig_import(name, *args)
+
+    with mock.patch("builtins.__import__", side_effect=import_mock):
+        import xcengine.util
+        util_vars = (
+            k for k in xcengine.util.__dict__.keys()
+            if k == "xcube" or k.startswith("xcube.")
+        )
+        for v in util_vars: del xcengine.util.__dict__[v]
+        from xcengine.util import start_server
+        logger = logging.getLogger("test-start-server-logger")
+        logger.setLevel(logging.INFO)
+        logger.addHandler(logging.StreamHandler(log_stream := io.StringIO()))
+        start_server(
+            {"ds1": dataset},
+            {},
+            argparse.Namespace(batch=False, from_saved=False),
+            logger
+        )
+        logged = log_stream.getvalue()
+        assert "Not starting" in logged
+        assert "Starting server" not in logged
 
 
 @pytest.mark.parametrize("eoap_mode", [False, True])
