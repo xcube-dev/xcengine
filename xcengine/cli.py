@@ -151,7 +151,19 @@ def image_cli():
     "--skip-build",
     is_flag=True,
     help="Prepare the Dockerfile and build context, but don't actually build "
-    "the image"
+    "the image",
+)
+@click.option(
+    "-n",
+    "--no-eoap",
+    is_flag=True,
+    help="Do not add EOAP functionality to built image",
+)
+@click.option(
+    "-n",
+    "--no-xcube",
+    is_flag=True,
+    help="Do not add xcube server/viewer functionality to built image",
 )
 @notebook_argument
 def build(
@@ -160,27 +172,37 @@ def build(
     environment: pathlib.Path,
     tag: str,
     eoap: pathlib.Path,
-    skip_build: bool
+    skip_build: bool,
+    no_eoap: bool,
+    no_xcube: bool,
 ) -> None:
     if environment is None:
         LOGGER.info("No environment file specified on command line.")
 
     class InitArgs(TypedDict):
         notebook: pathlib.Path
-        environment: pathlib.Path
+        environment: pathlib.Path | None
         tag: str
 
+    class BuildArgs(TypedDict):
+        skip_build: bool
+        with_eoap: bool
+        with_xcube: bool
+
     init_args = InitArgs(notebook=notebook, environment=environment, tag=tag)
+    build_args = BuildArgs(
+        skip_build=skip_build, with_eoap=not no_eoap, with_xcube=not no_xcube
+    )
     if build_dir:
         image_builder = ImageBuilder(build_dir=build_dir, **init_args)
         os.makedirs(build_dir, exist_ok=True)
-        image = image_builder.build(skip_build=skip_build)
+        image = image_builder.build(**build_args)
     else:
         with tempfile.TemporaryDirectory() as temp_dir:
             image_builder = ImageBuilder(
                 build_dir=pathlib.Path(temp_dir), **init_args
             )
-            image = image_builder.build(skip_build=skip_build)
+            image = image_builder.build(**build_args)
     if eoap:
 
         class IndentDumper(yaml.Dumper):
@@ -196,8 +218,8 @@ def build(
         )
     print(
         f"Built image with tags {image.tags}"
-        if image is not None else
-        "No image built"
+        if image is not None
+        else "No image built"
     )
 
 

@@ -86,13 +86,11 @@ def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
         }
 
 
-
-
-
 def test_write_stac_no_pystac(tmp_path, dataset):
     # Import hooks are the recommended "clean" way to do this, but don't work
     # in this case.
     orig_import = __import__
+
     def import_mock(name, *args):
         if name == "pystac":
             raise ModuleNotFoundError("No module named 'pystac'")
@@ -105,15 +103,19 @@ def test_write_stac_no_pystac(tmp_path, dataset):
         # on import, but the important thing is to break any implementation
         # that tries to import pystac without checking if it's available.
         import xcengine.util
+
         xcengine.util.__dict__.pop("pystac", None)
         from xcengine.util import write_stac
+
         write_stac({"ds1": dataset}, tmp_path)
         # We want nothing to happen here, so no explicit assertions.
 
 
 def test_start_server_no_xcube(dataset):
     import io
+
     orig_import = __import__
+
     def import_mock(name, *args):
         if name == "xcube" or name.startswith("xcube."):
             raise ModuleNotFoundError(f"No module named {name}")
@@ -121,12 +123,16 @@ def test_start_server_no_xcube(dataset):
 
     with mock.patch("builtins.__import__", side_effect=import_mock):
         import xcengine.util
+
         util_vars = (
-            k for k in xcengine.util.__dict__.keys()
+            k
+            for k in xcengine.util.__dict__.keys()
             if k == "xcube" or k.startswith("xcube.")
         )
-        for v in util_vars: del xcengine.util.__dict__[v]
+        for v in util_vars:
+            del xcengine.util.__dict__[v]
         from xcengine.util import start_server
+
         logger = logging.getLogger("test-start-server-logger")
         logger.setLevel(logging.INFO)
         logger.addHandler(logging.StreamHandler(log_stream := io.StringIO()))
@@ -134,7 +140,7 @@ def test_start_server_no_xcube(dataset):
             {"ds1": dataset},
             {},
             argparse.Namespace(batch=False, from_saved=False),
-            logger
+            logger,
         )
         logged = log_stream.getvalue()
         assert "Not starting" in logged
