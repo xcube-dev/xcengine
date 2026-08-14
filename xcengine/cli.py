@@ -160,7 +160,7 @@ def image_cli():
     help="Do not add EOAP functionality to built image",
 )
 @click.option(
-    "-n",
+    "-x",
     "--no-xcube",
     is_flag=True,
     help="Do not add xcube server/viewer functionality to built image",
