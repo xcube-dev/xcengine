@@ -377,3 +377,21 @@ def test_read_datasets_from_product_missing_items(
         params.read_datasets_from_product(tmp_path, {})
     for substring in "missing", "foo", "bar":
         assert substring in str(error)
+
+
+def test_read_annotations_from_code():
+    import textwrap
+    annotated_code = textwrap.dedent(
+        """
+        my_int: int = 42
+        eoproduct: "EOInput" = None
+        """
+    )
+    expected = [
+        {"annotation": "int", "value": "42", "target": "my_int", "line": 2},
+        {"annotation": "'EOInput'", "value": "None", "target": "eoproduct", "line": 3},
+    ]
+
+    annotations = NotebookParameters.read_annotations(annotated_code)
+
+    assert annotations == expected
