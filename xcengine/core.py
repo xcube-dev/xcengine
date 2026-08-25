@@ -125,6 +125,7 @@ class ScriptCreator:
             "cwlVersion": "v1.0",
             "$namespaces": {"s": "https://schema.org/"},
             "s:version": "1.0.0",
+            "s:softwareVersion": "1.0.0",
             "schemas": [
                 "http://schema.org/version/9.0/schemaorg-current-http.rdf"
             ],
