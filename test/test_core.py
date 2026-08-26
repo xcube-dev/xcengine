@@ -354,7 +354,9 @@ def test_script_creator_notebook_config():
 def test_script_creator_notebook_config_http(httpserver):
     http_path = "/mynotebook.ipynb"
     nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
-    httpserver.expect_request(http_path).respond_with_data(nb_path.read_bytes())
+    httpserver.expect_request(http_path).respond_with_data(
+        nb_path.read_bytes()
+    )
     script_creator = ScriptCreator(httpserver.url_for(http_path))
     config = script_creator.nb_params.config
     assert config["environment_file"] == "my-environment.yml"
@@ -382,12 +384,20 @@ def test_image_builder_write_dockerfile(tmp_path):
 @patch("docker.from_env")
 @pytest.mark.parametrize("env_type", ["none", "local", "http"])
 @pytest.mark.parametrize("skip_build", [False, True])
+@pytest.mark.parametrize("with_eoap", [False, True])
+@pytest.mark.parametrize("with_xcube", [False, True])
+@pytest.mark.parametrize("pystac_in_deps", [False, True])
+@pytest.mark.parametrize("xcube_in_deps", [False, True])
 def test_image_builder_build_dir(
-        from_env_mock,
-        tmp_path,
-        httpserver,
-        env_type,
-        skip_build
+    from_env_mock,
+    tmp_path,
+    httpserver,
+    env_type,
+    skip_build,
+    with_eoap,
+    with_xcube,
+    pystac_in_deps,
+    xcube_in_deps,
 ):
     client_mock = Mock(docker.client.DockerClient)
     client_mock.images.build.return_value = None, None
@@ -398,16 +408,22 @@ def test_image_builder_build_dir(
     env_def = {
         "name": "foo",
         "channels": "bar",
-        "dependencies": ["python >=3.13", "baz >=42.0"],
+        "dependencies": ["python >=3.13", "baz >=42.0"]
+        + (["pystac"] if pystac_in_deps else [])
+        + (["xcube"] if xcube_in_deps else []),
     }
     build_env_path.write_text(yaml.safe_dump(env_def))
     env_http = "/env2.yaml"
 
     match env_type:
-        case "none": env_param = None
-        case "local": env_param = build_env_path
+        case "none":
+            env_param = None
+        case "local":
+            env_param = build_env_path
         case "http":
-            httpserver.expect_request(env_http).respond_with_data(build_env_path.read_bytes())
+            httpserver.expect_request(env_http).respond_with_data(
+                build_env_path.read_bytes()
+            )
             env_param = httpserver.url_for(env_http)
         case _:
             raise RuntimeError(f"Unknown env type {env_type}")
@@ -418,7 +434,9 @@ def test_image_builder_build_dir(
         build_dir,
         None,
     )
-    image_builder.build(skip_build=skip_build)
+    image_builder.build(
+        skip_build=skip_build, with_eoap=with_eoap, with_xcube=with_xcube
+    )
     if skip_build:
         from_env_mock.assert_not_called()
     else:
@@ -430,7 +448,12 @@ def test_image_builder_build_dir(
     if env_type != "none":
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]
-        assert set(output_env["dependencies"]) >= set(env_def["dependencies"])
+
+        output_deps = set(output_env["dependencies"])
+        input_deps = set(env_def["dependencies"])
+        assert output_deps >= input_deps
+        assert ("pystac" in output_deps) == pystac_in_deps or with_eoap
+        assert ("xcube" in output_deps) == xcube_in_deps or with_xcube
 
     cwl = image_builder.create_cwl()
     assert "cwlVersion" in cwl
