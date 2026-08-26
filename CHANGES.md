@@ -2,6 +2,8 @@
 
 * Allow HTTP URLs and other fsspec-supported specifiers as notebook and
   environment file paths (#42)
+* Allow creation of EOAP-only and xcube-server-only images, omitting
+  unnecessary dependencies (#56)
 
 ## Changes in 0.1.2
 
