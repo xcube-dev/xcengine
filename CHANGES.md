@@ -2,6 +2,10 @@
 
 * Allow HTTP URLs and other fsspec-supported specifiers as notebook and
   environment file paths (#42)
+* Add `s:version` metadata field to CWL as a synonym for
+  `s:softwareVersion` (#90)
+* Allow creation of EOAP-only and xcube-server-only images, omitting
+  unnecessary dependencies (#56)
 
 ## Changes in 0.1.2
 

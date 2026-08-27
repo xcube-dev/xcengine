@@ -40,6 +40,16 @@ Options:
     timestamp-based tag will be generated automatically.
 -   `-a`, `--eoap` `PATH`: Write a CWL file defining an Earth Observation
     Application Package to the specified path.
+-   `-s`, `--skip-build`: Prepare the Dockerfile and build context, but
+    don't actually build the image. Mainly useful in conjunction with the
+    `--build-dir` option, so that the generated build configuration can
+    used by an external tool or examined.
+-   `-n`, `--no-eoap`: Do not add EOAP functionality to the built image.
+    The image will only be useable in xcube server mode. This option can
+    help to reduce the size of the image.
+-   `-x`, `--no-xcube`: Do not add xcube server/viewer functionality to
+    the built image. The image will only be useable in EOAP mode. This
+    option can help to reduce the size of the image.
 -   `--help`: Show a help message for this subcommand and exit.
 
 ### `xcetool image run`

@@ -4,7 +4,6 @@ import pathlib
 import typing
 from typing import Any, ClassVar
 
-import pystac
 import xarray as xr
 import yaml
 
@@ -47,6 +46,7 @@ class NotebookParameters:
     ) -> "NotebookParameters":
         variables = cls.extract_variables(code, setup_code)
         config = variables.pop(cls.config_var_name, (None, None))
+        # TODO: throw an error here if config has wrong type
         return cls(variables, config[1])
 
     @classmethod
@@ -177,6 +177,7 @@ class NotebookParameters:
                 f"Stage-in directory {stage_in_path} does not contain a "
                 f'"catalog.json" file.'
             )
+        import pystac
         catalog = pystac.Catalog.from_file(catalog_path)
         item_links = [link for link in catalog.links if link.rel == "item"]
         expected_names = set(self.dataset_inputs)
@@ -202,9 +203,10 @@ class NotebookParameters:
     @staticmethod
     def read_staged_in_dataset(
         stage_in_path: pathlib.Path,
-        catalog: pystac.Catalog,
+        catalog: "pystac.Catalog",
         param_name: str,
     ) -> xr.Dataset:
+        import pystac
         item_links = [link for link in catalog.links if link.rel == "item"]
         item = next(
             filter(

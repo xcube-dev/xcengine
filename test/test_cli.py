@@ -66,9 +66,19 @@ def test_make_script(
 @pytest.mark.parametrize("specify_dir", [False, True])
 @pytest.mark.parametrize("specify_env", [False, True])
 @pytest.mark.parametrize("specify_eoap", [False, True])
+@pytest.mark.parametrize("skip_build", [False, True])
+@pytest.mark.parametrize("no_eoap", [False, True])
+@pytest.mark.parametrize("no_xcube", [False, True])
 @patch("xcengine.cli.ImageBuilder")
 def test_image_build(
-    builder_mock, tmp_path, specify_dir, specify_env, specify_eoap
+    builder_mock,
+    tmp_path,
+    specify_dir,
+    specify_env,
+    specify_eoap,
+    skip_build,
+    no_eoap,
+    no_xcube,
 ):
     (nb_path := tmp_path / "foo.ipynb").touch()
     (env_path := tmp_path / "environment.yml").touch()
@@ -85,6 +95,9 @@ def test_image_build(
         + (["--build-dir", str(build_dir)] if specify_dir else [])
         + (["--environment", str(env_path)] if specify_env else [])
         + (["--eoap", str(eoap_path)] if specify_eoap else [])
+        + (["--skip-build"] if skip_build else [])
+        + (["--no-eoap"] if no_eoap else [])
+        + (["--no-xcube"] if no_xcube else [])
         + [str(nb_path)],
     )
     assert result.output.startswith("Built image")
@@ -95,7 +108,9 @@ def test_image_build(
         tag=tag,
         build_dir=(build_dir if specify_dir else ANY),
     )
-    instance_mock.build.assert_called_once_with(skip_build=False)
+    instance_mock.build.assert_called_once_with(
+        skip_build=skip_build, with_eoap=not no_eoap, with_xcube=not no_xcube
+    )
     if specify_eoap:
         assert yaml.safe_load(eoap_path.read_text()) == cwl
 

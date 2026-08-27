@@ -38,12 +38,8 @@ with __user_code_path.open() as fh:
 exec(user_code)
 
 import argparse
-import pathlib
 
 import xarray as xr
-import xcube.util.plugin
-import xcube.core.new
-import xcube.webapi.viewer
 
 
 def main():
@@ -62,7 +58,6 @@ def main():
     if args.verbose > 0:
         LOGGER.setLevel(logging.DEBUG)
 
-    xcube.util.plugin.init_plugins()
     datasets = {
         name: thing
         for name, thing in globals().copy().items()
