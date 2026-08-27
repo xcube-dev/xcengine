@@ -46,6 +46,7 @@ class NotebookParameters:
     ) -> "NotebookParameters":
         variables = cls.extract_variables(code, setup_code)
         config = variables.pop(cls.config_var_name, (None, None))
+        # TODO: throw an error here if config has wrong type
         return cls(variables, config[1])
 
     @classmethod
