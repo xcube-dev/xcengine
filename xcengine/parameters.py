@@ -234,19 +234,11 @@ class NotebookParameters:
             raise ValueError(f"Unhandled type {type_}")
 
     @staticmethod
-    def read_annotations(code: str) -> list[dict[str, Any]]:
+    def read_annotations(code: str) -> dict[str, str]:
         import ast
-        tree = ast.parse(code)
-        annotations: list[dict[str, Any]] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.AnnAssign):
-                continue
 
-            annotations.append({
-                "annotation": ast.unparse(node.annotation),
-                "value": ast.unparse(node.value) if node.value else None,
-                "target": ast.unparse(node.target),
-                "line": node.lineno,
-            })
-
-        return annotations
+        return {
+            ast.unparse(node.target): ast.unparse(node.annotation)
+            for node in ast.walk(ast.parse(code))
+            if isinstance(node, ast.AnnAssign)
+        }

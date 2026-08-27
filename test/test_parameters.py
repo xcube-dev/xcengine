@@ -381,17 +381,12 @@ def test_read_datasets_from_product_missing_items(
 
 def test_read_annotations_from_code():
     import textwrap
-    annotated_code = textwrap.dedent(
-        """
+
+    annotated_code = textwrap.dedent("""
         my_int: int = 42
         eoproduct: "EOInput" = None
-        """
-    )
-    expected = [
-        {"annotation": "int", "value": "42", "target": "my_int", "line": 2},
-        {"annotation": "'EOInput'", "value": "None", "target": "eoproduct", "line": 3},
-    ]
-
-    annotations = NotebookParameters.read_annotations(annotated_code)
-
-    assert annotations == expected
+        """)
+    assert NotebookParameters.read_annotations(annotated_code) == {
+        "my_int": "int",
+        "eoproduct": "'EOInput'",
+    }
