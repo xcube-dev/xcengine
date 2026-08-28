@@ -2,7 +2,7 @@ import logging
 import os
 import pathlib
 import typing
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 import xarray as xr
 import yaml
@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 class NotebookParameters:
 
-    params: dict[str, tuple[type, Any]]
+    params: dict[str, tuple[type | str, Any]]
     cwl_params: dict[str, tuple[type | str, Any]]
     dataset_inputs: list[str]
     config_var_name: ClassVar[str] = "xcengine_config"
@@ -21,7 +21,7 @@ class NotebookParameters:
 
     def __init__(
         self,
-        params: dict[str, tuple[type, Any]],
+        params: dict[str, tuple[type | str, Any]],
         config: dict[str, Any] | None = None,
     ):
         self.params = params
@@ -46,16 +46,27 @@ class NotebookParameters:
     ) -> "NotebookParameters":
         variables = cls.extract_variables(code, setup_code)
         config = variables.pop(cls.config_var_name, (None, None))
-        # TODO: throw an error here if config has wrong type
-        return cls(variables, config[1])
+        if config[1] is not None:
+            if type(config[1]) is not dict:
+                raise TypeError("Configuration variable must be a dict")
+            if not all(type(k) is str for k in cast(dict, config[1]).keys()):
+                raise TypeError("Configuration dict keys must be strings")
+        return cls(variables, cast(dict[str, Any], config[1]))
 
     @classmethod
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
         input_data = yaml.safe_load(yaml_content)
+        def convert_type(yaml_spec: str) -> type | str:
+            match yaml_spec:
+                case "int" | "float" | "bool" | "str" | "Dataset":
+                    return eval(yaml_spec, globals(), {"Dataset": xr.Dataset})
+                case "Directory":
+                    return "Directory"
+            raise ValueError(f'Unknown type in YAML: "{yaml_spec}"')
         return cls(
             {
                 k: (
-                    eval(v["type"], globals(), {"Dataset": xr.Dataset}),
+                    convert_type(v["type"]),
                     v["default"],
                 )
                 for k, v in input_data.items()
@@ -70,7 +81,7 @@ class NotebookParameters:
     @classmethod
     def extract_variables(
         cls, code: str, setup_code: str | None = None
-    ) -> dict[str, tuple[type, Any]]:
+    ) -> dict[str, tuple[type | str, Any]]:
         if setup_code is None:
             locals_: dict[str, object] = {}
             old_locals = {}
@@ -78,14 +89,19 @@ class NotebookParameters:
             exec(setup_code, globals(), locals_ := {})
             old_locals = locals_.copy()
         exec(code, globals(), locals_)
+        annotations = cls.read_annotations(code)
         new_vars = locals_.keys() - old_locals.keys()
         new_var_dict = {
-            k: cls.make_param_tuple(k, locals_[k]) for k in new_vars
+            k: cls.make_param_tuple(k, locals_[k]) for k in new_vars if not k.startswith("__")
         }
+        for k in new_var_dict:
+            if k in annotations and annotations[k] == "'EOInput'":
+                old_var = new_var_dict[k]
+                new_var_dict[k] = ("Directory", old_var[1])
         return dict(sorted(new_var_dict.items()))
 
     @classmethod
-    def make_param_tuple(cls, key: str, value: Any) -> tuple[type, Any]:
+    def make_param_tuple(cls, key: str, value: Any) -> tuple[type | str, Any]:
         return (
             t := type(value),
             (
@@ -125,9 +141,17 @@ class NotebookParameters:
         }
 
     def to_yaml(self) -> str:
+        def dump_type(type_: type | str) -> str:
+            match type_:
+                case type():
+                    return type_.__name__
+                case str():
+                    return type_
+                case _:
+                    raise TypeError(f"Unhandled type {type_} for YAML export")
         return yaml.safe_dump(
             {
-                name: {"type": type_.__name__, "default": default_}
+                name: {"type": dump_type(type_), "default": default_}
                 for name, (type_, default_) in self.params.items()
             }
         )
@@ -223,7 +247,7 @@ class NotebookParameters:
         return xr.open_dataset(stage_in_path / asset.href)
 
     @staticmethod
-    def cwl_type(type_: type) -> str:
+    def cwl_type(type_: type | str) -> str:
         try:
             # noinspection PyTypeChecker
             return {
@@ -231,6 +255,7 @@ class NotebookParameters:
                 float: "double",
                 str: "string",
                 bool: "boolean",
+                "Directory": "Directory",
             }[type_]
         except KeyError:
             raise ValueError(f"Unhandled type {type_}")

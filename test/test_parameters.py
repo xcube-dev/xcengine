@@ -19,6 +19,7 @@ def expected_vars():
         "some_float": (float, 3.14159),
         "some_string": (str, "foo"),
         "some_bool": (bool, False),
+        "some_directory": ("Directory", "/some/path")
     }
 
 
@@ -37,6 +38,9 @@ some_string:
 some_bool:
     type: bool
     default: false
+some_directory:
+    type: Directory
+    default: "/some/path"
 """
 
 
@@ -130,6 +134,13 @@ def test_parameters_get_commandline_inputs(notebook_parameters):
             "doc": "some_bool",
             "inputBinding": {"prefix": "--some-bool"},
         },
+        "some_directory": {
+            "type": "Directory",
+            "default": "/some/path",
+            "label": "some_directory",
+            "doc": "some_directory",
+            "inputBinding": {"prefix": "--some-directory"},
+        },
     }
 
 
@@ -139,6 +150,7 @@ def test_parameters_get_cwl_step_inputs(notebook_parameters):
         "some_float": "some_float",
         "some_string": "some_string",
         "some_bool": "some_bool",
+        "some_directory": "some_directory",
     }
 
 
@@ -148,6 +160,7 @@ some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
+some_directory: "EOInput" = "/some/path"
     """)
     assert parameters.params == expected_vars
     assert parameters.config == {}
@@ -160,6 +173,7 @@ some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
+some_directory: "EOInput" = "/some/path"
 {NotebookParameters.config_var_name} = {xce_config!r}
     """
     parameters = xcengine.parameters.NotebookParameters.from_code(code)
@@ -175,11 +189,13 @@ some_int = 2 * half_of_some_int
 some_float = 3.14159
 some_string = some_uppercase_string.lower()
 some_bool = not not_some_bool
+some_directory: "EOInput" = "/" + "/".join(some_path_components)
     """,
             setup_code="""
 half_of_some_int = 21
 some_uppercase_string = "FOO"
 not_some_bool = True
+some_path_components = ["some", "path"]
             """,
         ).params
         == expected_vars
@@ -212,6 +228,12 @@ def test_parameters_get_workflow_inputs(notebook_parameters):
             "label": "some_bool",
             "doc": "some_bool",
         },
+        "some_directory": {
+            "type": "Directory",
+            "default": "/some/path",
+            "label": "some_directory",
+            "doc": "some_directory",
+        }
     }
 
 
@@ -221,6 +243,7 @@ def test_parameters_to_yaml(notebook_parameters):
         "some_float": {"type": "float", "default": 3.14159},
         "some_string": {"type": "str", "default": "foo"},
         "some_bool": {"type": "bool", "default": False},
+        "some_directory": {"type": "Directory", "default": "/some/path"},
     }
 
 
