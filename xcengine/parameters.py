@@ -1,3 +1,4 @@
+import builtins
 import logging
 import os
 import pathlib
@@ -182,9 +183,15 @@ class NotebookParameters:
         for param_name, (type_, _) in self.params.items():
             arg_name = "--" + param_name.replace("_", "-")
             if arg_name in args and type_ != xr.Dataset:
-                values[param_name] = type_ is bool or type_(
-                    args[args.index(arg_name) + 1]
-                )
+                match type_:
+                    case builtins.bool:
+                        values[param_name] = True
+                    case "Directory":
+                        values[param_name] = args[args.index(arg_name) + 1]
+                    case _:
+                        values[param_name] = type_(
+                            args[args.index(arg_name) + 1]
+                        )
         if "product" in self.cwl_params and "--product" in args:
             self.read_datasets_from_product(
                 args[args.index("--product") + 1], values
