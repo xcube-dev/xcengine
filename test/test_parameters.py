@@ -166,8 +166,12 @@ some_directory: "EOInput" = "/some/path"
     assert parameters.config == {}
 
 
-def test_parameters_from_code_with_xce_config(expected_vars):
-    xce_config = dict(foo=1, bar="hi!", baz={})
+@pytest.mark.parametrize("config", [
+    (dict(foo=1, bar="hi!", baz={}), True),
+    ("Not a dict", False),
+    ({42: "Wrong key type"}, False)])
+def test_parameters_from_code_with_xce_config(expected_vars, config):
+    xce_config, valid = config
     code = f"""
 some_int = 42
 some_float = 3.14159
@@ -176,9 +180,13 @@ some_bool = False
 some_directory: "EOInput" = "/some/path"
 {NotebookParameters.config_var_name} = {xce_config!r}
     """
-    parameters = xcengine.parameters.NotebookParameters.from_code(code)
-    assert parameters.params == expected_vars
-    assert parameters.config == xce_config
+    if valid:
+        parameters = xcengine.parameters.NotebookParameters.from_code(code)
+        assert parameters.params == expected_vars
+        assert parameters.config == xce_config
+    else:
+        with pytest.raises(TypeError):
+            xcengine.parameters.NotebookParameters.from_code(code)
 
 
 def test_parameters_from_code_with_setup(expected_vars):
@@ -247,6 +255,16 @@ def test_parameters_to_yaml(notebook_parameters):
     }
 
 
+def test_parameters_to_yaml_unhandled_type():
+    with pytest.raises(TypeError):
+        # Create empty parameters and modify them afterwards to avoid
+        # __init__ catching the mistake.
+        np = xcengine.parameters.NotebookParameters({})
+        # Disable the inspection, since this is wrong on purpose.
+        # noinspection bad-assignment
+        np.params = {"foo": (42, 42)}
+        np.to_yaml()
+
 def test_parameters_from_yaml(expected_vars, params_yaml):
     assert NotebookParameters.from_yaml(params_yaml).params == expected_vars
 
@@ -262,6 +280,15 @@ some_ds:
     assert NotebookParameters.from_yaml(yaml_).params == {
         "some_ds": (xr.Dataset, None)
     }
+
+
+def test_parameters_from_yaml_unknown_type():
+    with pytest.raises(ValueError):
+        NotebookParameters.from_yaml("""
+some_input:
+    type: unsupported
+    default: null
+        """)
 
 
 def test_parameters_from_file(tmp_path, expected_vars, params_yaml):
