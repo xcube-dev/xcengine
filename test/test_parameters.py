@@ -136,7 +136,10 @@ def test_parameters_get_commandline_inputs(notebook_parameters):
         },
         "some_directory": {
             "type": "Directory",
-            "default": "/some/path",
+            "default": {
+                "class": "Directory",
+                "location": "/some/path"
+            },
             "label": "some_directory",
             "doc": "some_directory",
             "inputBinding": {"prefix": "--some-directory"},
@@ -238,7 +241,10 @@ def test_parameters_get_workflow_inputs(notebook_parameters):
         },
         "some_directory": {
             "type": "Directory",
-            "default": "/some/path",
+            "default": {
+                "class": "Directory",
+                "location": "/some/path",
+            },
             "label": "some_directory",
             "doc": "some_directory",
         }

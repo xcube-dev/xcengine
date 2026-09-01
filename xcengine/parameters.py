@@ -133,7 +133,8 @@ class NotebookParameters:
             "label": var_name,
             "doc": var_name,
             "type": self.cwl_type(type_),
-            "default": default_,
+            "default": {"class": "Directory", "location": default_}
+                if type_ == "Directory" else default_,
         }
 
     def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
