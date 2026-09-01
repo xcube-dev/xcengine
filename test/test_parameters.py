@@ -314,12 +314,15 @@ def test_parameters_read_cli_arguments(notebook_parameters):
             "--some-float",
             "2.71828",
             "--some-bool",
+            "--some-directory",
+            "/a/different/path"
         ]
     ) == {
         "some_int": 23,
         "some_float": 2.71828,
         "some_string": "bar",
         "some_bool": True,
+        "some_directory": "/a/different/path"
     }
     assert notebook_parameters.read_params_from_cli([]) == {}
 
