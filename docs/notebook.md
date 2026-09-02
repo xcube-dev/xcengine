@@ -35,7 +35,7 @@ name `xcengine_config`. Available configuration settings are:
 
 -   `workflow_id`: a string identifier for the workflow in your Application
     Package. The runner or Application Package platform can use this
-    identifier to refer to you Application Package. By default, the name
+    identifier to refer to your Application Package. By default, the name
     of the notebook (without the `.ipynb` suffix) is used.
 -   `environment_file`: the name of a YAML file defining a [conda
     environment](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
@@ -51,17 +51,45 @@ name `xcengine_config`. Available configuration settings are:
 
 Some of these configuration settings can also be set on the command line.
 
+## Dataset input
+
+As well as the usual methods of dataset input, xcengine provides support for
+the Application Package ‘stage-in’ process described in the [OGC Best
+Practice document](https://docs.ogc.org/bp/20-089r1.html), in which an
+Application Package Platform provides the Application Package with a
+[STAC catalogue](https://stacspec.org/) of one or more input datasets.
+
+xcengine currently provides basic support for stage-in: in a generated
+Application Package, the xcengine support code provides the notebook code with
+the path to the STAC stage-in catalogue. The notebook code can then read this
+catalogue (e.g. using [PySTAC](https://pystac.readthedocs.io/)) to find the
+staged-in datasets.
+
+An input variable for a STAC stage-in catalogue can be defined in the
+parameters cell (see above) as a string variable. The variable name can be
+freely chosen, but the variable declaration must be annotated with the string
+`"EOInput"` to distinguish it from an ordinary string parameter, like this:
+
+```python
+dataset_inputs: "EOInput" = "/some/default/path"
+```
+
+When the converted notebook is run as an Application Package, the variable
+`dataset_inputs` will be set to a string specifying a filesystem path
+containing a STAC catalogue called `catalog.json`, which the notebook code
+can use to find staged-in datasets.
+
 ## Dataset output
 
 ### Selecting datasets for output
 
-No additional code or configuration is needed for datasets to be written from
-Application Packages or served when the container image is run in xcube
-Server/Viewer mode. xcengine will automatically output or serve any instance
-of `xarray.DataSet` which is in scope when the notebook's code has finished
-executing. If you're created some datasets which you *don't* wish to be
-written, you can use the Python
-[`del` statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
+No additional code or configuration is needed for datasets to be written
+(‘staged out’) from Application Packages or served when the container image is
+run in xcube Server/Viewer mode. xcengine will automatically output or serve
+any instance of `xarray.DataSet` which is in scope when the notebook's code
+has finished executing. If you're created some datasets which you *don't* wish
+to be written, you can use the Python [`del`
+statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
 to delete them at the end of the notebook to remove them, e.g.
 
 ```python
@@ -77,3 +105,11 @@ like this:
 ```python
 my_dataset.attrs["xcengine_output_format"] = "netcdf"
 ```
+
+## Determining whether your code is running in an xcengine container
+
+In an xcengine-derived container, the environment variable `XCENGINE_VERSION`
+is always set to the version of xcengine that created the container image. If
+your notebook code needs to determine whether it's running inside an xcengine
+container, you can check whether this variable is set (e.g. using
+`os.environ`).

@@ -444,7 +444,8 @@ def test_image_builder_build_dir(
     build_env_path = build_dir / "environment.yml"
     assert build_env_path.is_file()
     output_env = yaml.safe_load(build_env_path.read_text())
-    assert {"name", "channels", "dependencies"} <= set(output_env)
+    assert {"name", "channels", "dependencies", "variables"} <= set(output_env)
+    assert type(output_env["variables"]["XCENGINE_VERSION"]) is str
     if env_type != "none":
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]

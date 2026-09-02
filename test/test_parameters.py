@@ -19,6 +19,7 @@ def expected_vars():
         "some_float": (float, 3.14159),
         "some_string": (str, "foo"),
         "some_bool": (bool, False),
+        "some_directory": ("Directory", "/some/path")
     }
 
 
@@ -37,6 +38,9 @@ some_string:
 some_bool:
     type: bool
     default: false
+some_directory:
+    type: Directory
+    default: "/some/path"
 """
 
 
@@ -130,6 +134,16 @@ def test_parameters_get_commandline_inputs(notebook_parameters):
             "doc": "some_bool",
             "inputBinding": {"prefix": "--some-bool"},
         },
+        "some_directory": {
+            "type": "Directory",
+            "default": {
+                "class": "Directory",
+                "location": "/some/path"
+            },
+            "label": "some_directory",
+            "doc": "some_directory",
+            "inputBinding": {"prefix": "--some-directory"},
+        },
     }
 
 
@@ -139,6 +153,7 @@ def test_parameters_get_cwl_step_inputs(notebook_parameters):
         "some_float": "some_float",
         "some_string": "some_string",
         "some_bool": "some_bool",
+        "some_directory": "some_directory",
     }
 
 
@@ -148,23 +163,33 @@ some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
+some_directory: "EOInput" = "/some/path"
     """)
     assert parameters.params == expected_vars
     assert parameters.config == {}
 
 
-def test_parameters_from_code_with_xce_config(expected_vars):
-    xce_config = dict(foo=1, bar="hi!", baz={})
+@pytest.mark.parametrize("config", [
+    (dict(foo=1, bar="hi!", baz={}), True),
+    ("Not a dict", False),
+    ({42: "Wrong key type"}, False)])
+def test_parameters_from_code_with_xce_config(expected_vars, config):
+    xce_config, valid = config
     code = f"""
 some_int = 42
 some_float = 3.14159
 some_string = "foo"
 some_bool = False
+some_directory: "EOInput" = "/some/path"
 {NotebookParameters.config_var_name} = {xce_config!r}
     """
-    parameters = xcengine.parameters.NotebookParameters.from_code(code)
-    assert parameters.params == expected_vars
-    assert parameters.config == xce_config
+    if valid:
+        parameters = xcengine.parameters.NotebookParameters.from_code(code)
+        assert parameters.params == expected_vars
+        assert parameters.config == xce_config
+    else:
+        with pytest.raises(TypeError):
+            xcengine.parameters.NotebookParameters.from_code(code)
 
 
 def test_parameters_from_code_with_setup(expected_vars):
@@ -175,11 +200,13 @@ some_int = 2 * half_of_some_int
 some_float = 3.14159
 some_string = some_uppercase_string.lower()
 some_bool = not not_some_bool
+some_directory: "EOInput" = "/" + "/".join(some_path_components)
     """,
             setup_code="""
 half_of_some_int = 21
 some_uppercase_string = "FOO"
 not_some_bool = True
+some_path_components = ["some", "path"]
             """,
         ).params
         == expected_vars
@@ -212,6 +239,15 @@ def test_parameters_get_workflow_inputs(notebook_parameters):
             "label": "some_bool",
             "doc": "some_bool",
         },
+        "some_directory": {
+            "type": "Directory",
+            "default": {
+                "class": "Directory",
+                "location": "/some/path",
+            },
+            "label": "some_directory",
+            "doc": "some_directory",
+        }
     }
 
 
@@ -221,8 +257,19 @@ def test_parameters_to_yaml(notebook_parameters):
         "some_float": {"type": "float", "default": 3.14159},
         "some_string": {"type": "str", "default": "foo"},
         "some_bool": {"type": "bool", "default": False},
+        "some_directory": {"type": "Directory", "default": "/some/path"},
     }
 
+
+def test_parameters_to_yaml_unhandled_type():
+    with pytest.raises(TypeError):
+        # Create empty parameters and modify them afterwards to avoid
+        # __init__ catching the mistake.
+        np = xcengine.parameters.NotebookParameters({})
+        # Disable the inspection, since this is wrong on purpose.
+        # noinspection bad-assignment
+        np.params = {"foo": (42, 42)}
+        np.to_yaml()
 
 def test_parameters_from_yaml(expected_vars, params_yaml):
     assert NotebookParameters.from_yaml(params_yaml).params == expected_vars
@@ -239,6 +286,15 @@ some_ds:
     assert NotebookParameters.from_yaml(yaml_).params == {
         "some_ds": (xr.Dataset, None)
     }
+
+
+def test_parameters_from_yaml_unknown_type():
+    with pytest.raises(ValueError):
+        NotebookParameters.from_yaml("""
+some_input:
+    type: unsupported
+    default: null
+        """)
 
 
 def test_parameters_from_file(tmp_path, expected_vars, params_yaml):
@@ -264,12 +320,15 @@ def test_parameters_read_cli_arguments(notebook_parameters):
             "--some-float",
             "2.71828",
             "--some-bool",
+            "--some-directory",
+            "/a/different/path"
         ]
     ) == {
         "some_int": 23,
         "some_float": 2.71828,
         "some_string": "bar",
         "some_bool": True,
+        "some_directory": "/a/different/path"
     }
     assert notebook_parameters.read_params_from_cli([]) == {}
 

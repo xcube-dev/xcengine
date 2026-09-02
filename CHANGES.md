@@ -6,7 +6,7 @@
   `s:softwareVersion` (#90)
 * Allow creation of EOAP-only and xcube-server-only images, omitting
   unnecessary dependencies (#56)
-* Add a utility function to read annotations from notebook code (#91)
+* Add support for notebook-assisted stage-in (#23, #91, #95)
 
 ## Changes in 0.1.2
 
