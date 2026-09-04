@@ -1,4 +1,5 @@
 # Copyright (c) 2024-2026 by Brockmann Consult GmbH
+# Copyright (c) 2024-2026 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
@@ -190,6 +191,8 @@ class ImageBuilder:
 
     tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
     environment: pathlib.Path | str | None = None
+    include_directory: bool = False
+    build_includes: list[pathlib.Path | str] = []
 
     def __init__(
         self,
@@ -216,6 +219,9 @@ class ImageBuilder:
                 LOGGER.info(f"No tag in notebook; using {self.tag}")
         else:
             self.tag = tag
+
+        self.include_directory = nb_config.get("include_directory", False)
+        self.build_includes = nb_config.get("build_includes", [])
 
         if environment is not None:
             self.environment = environment
@@ -265,6 +271,25 @@ class ImageBuilder:
         )
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
+        build_includes_path = self.build_dir / "build-includes"
+        build_includes_path.mkdir()
+        if self.build_includes:
+            for pathspec in self.build_includes:
+                path = (pathlib.Path(self.notebook).parent / pathlib.Path(pathspec)).resolve()
+                if path.is_dir():
+                    shutil.copytree(path, build_includes_path / path.name)
+                elif path.is_file():
+                    shutil.copy2(path, build_includes_path)
+                else:
+                    raise ValueError(
+                        f"{path} is neither a file nor a directory"
+                    )
+        if self.include_directory:
+            shutil.copytree(
+                pathlib.Path(self.notebook).parent,
+                self.build_dir / "runtime-includes"
+            )
+
         self.write_dockerfile(self.build_dir / "Dockerfile")
         return None if skip_build else self._build_image()
 
@@ -348,14 +373,18 @@ class ImageBuilder:
     def write_dockerfile(destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
         destination.parent.mkdir(parents=True, exist_ok=True)
+        copy_build_includes = f"COPY build-includes/* ./\n"
+        copy_runtime_includes = "COPY runtime-includes/* ./\n"
         with open(destination, "w") as fh:
-            fh.write(textwrap.dedent("""\
+            fh.write(textwrap.dedent(f"""\
             FROM mambaorg/micromamba:2.9-cuda13.2.1-ubuntu24.04
             COPY Dockerfile Dockerfile
             COPY environment.yml environment.yml
+            {copy_build_includes}
             RUN micromamba install -y -n base -f environment.yml && \\
               micromamba clean --all --yes
             WORKDIR /home/mambauser
+            {copy_runtime_includes}
             COPY user_code.py user_code.py
             COPY execute.py execute.py
             COPY parameters.yaml parameters.yaml
