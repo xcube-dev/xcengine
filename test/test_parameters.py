@@ -19,7 +19,7 @@ def expected_vars():
         "some_float": (float, 3.14159),
         "some_string": (str, "foo"),
         "some_bool": (bool, False),
-        "some_directory": ("Directory", "/some/path")
+        "some_directory": ("Directory", "/some/path"),
     }
 
 
@@ -136,10 +136,7 @@ def test_parameters_get_commandline_inputs(notebook_parameters):
         },
         "some_directory": {
             "type": "Directory",
-            "default": {
-                "class": "Directory",
-                "location": "/some/path"
-            },
+            "default": {"class": "Directory", "location": "/some/path"},
             "label": "some_directory",
             "doc": "some_directory",
             "inputBinding": {"prefix": "--some-directory"},
@@ -169,10 +166,14 @@ some_directory: "EOInput" = "/some/path"
     assert parameters.config == {}
 
 
-@pytest.mark.parametrize("config", [
-    (dict(foo=1, bar="hi!", baz={}), True),
-    ("Not a dict", False),
-    ({42: "Wrong key type"}, False)])
+@pytest.mark.parametrize(
+    "config",
+    [
+        (dict(foo=1, bar="hi!", baz={}), True),
+        ("Not a dict", False),
+        ({42: "Wrong key type"}, False),
+    ],
+)
 def test_parameters_from_code_with_xce_config(expected_vars, config):
     xce_config, valid = config
     code = f"""
@@ -247,7 +248,7 @@ def test_parameters_get_workflow_inputs(notebook_parameters):
             },
             "label": "some_directory",
             "doc": "some_directory",
-        }
+        },
     }
 
 
@@ -270,6 +271,7 @@ def test_parameters_to_yaml_unhandled_type():
         # noinspection bad-assignment
         np.params = {"foo": (42, 42)}
         np.to_yaml()
+
 
 def test_parameters_from_yaml(expected_vars, params_yaml):
     assert NotebookParameters.from_yaml(params_yaml).params == expected_vars
@@ -321,14 +323,14 @@ def test_parameters_read_cli_arguments(notebook_parameters):
             "2.71828",
             "--some-bool",
             "--some-directory",
-            "/a/different/path"
+            "/a/different/path",
         ]
     ) == {
         "some_int": 23,
         "some_float": 2.71828,
         "some_string": "bar",
         "some_bool": True,
-        "some_directory": "/a/different/path"
+        "some_directory": "/a/different/path",
     }
     assert notebook_parameters.read_params_from_cli([]) == {}
 

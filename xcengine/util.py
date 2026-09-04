@@ -12,6 +12,7 @@ from typing import NamedTuple, Mapping
 import xarray as xr
 from xarray import Dataset
 
+
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
         if path.is_dir():
@@ -130,10 +131,10 @@ def save_datasets(
 
 
 def start_server(
-        datasets: Mapping[str, xr.Dataset],
-        saved_datasets: dict[str, pathlib.Path],
-        args: argparse.Namespace,
-        logger: logging.Logger
+    datasets: Mapping[str, xr.Dataset],
+    saved_datasets: dict[str, pathlib.Path],
+    args: argparse.Namespace,
+    logger: logging.Logger,
 ):
     try:
         import xcube.util.plugin

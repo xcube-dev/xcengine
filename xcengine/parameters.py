@@ -57,6 +57,7 @@ class NotebookParameters:
     @classmethod
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
         input_data = yaml.safe_load(yaml_content)
+
         def convert_type(yaml_spec: str) -> type | str:
             match yaml_spec:
                 case "int" | "float" | "bool" | "str" | "Dataset":
@@ -64,6 +65,7 @@ class NotebookParameters:
                 case "Directory":
                     return "Directory"
             raise ValueError(f'Unknown type in YAML: "{yaml_spec}"')
+
         return cls(
             {
                 k: (
@@ -93,7 +95,9 @@ class NotebookParameters:
         annotations = cls.read_annotations(code)
         new_vars = locals_.keys() - old_locals.keys()
         new_var_dict = {
-            k: cls.make_param_tuple(k, locals_[k]) for k in new_vars if not k.startswith("__")
+            k: cls.make_param_tuple(k, locals_[k])
+            for k in new_vars
+            if not k.startswith("__")
         }
         for k in new_var_dict:
             if k in annotations and annotations[k] == "'EOInput'":
@@ -133,8 +137,11 @@ class NotebookParameters:
             "label": var_name,
             "doc": var_name,
             "type": self.cwl_type(type_),
-            "default": {"class": "Directory", "location": default_}
-                if type_ == "Directory" else default_,
+            "default": (
+                {"class": "Directory", "location": default_}
+                if type_ == "Directory"
+                else default_
+            ),
         }
 
     def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
@@ -151,6 +158,7 @@ class NotebookParameters:
                     return type_
                 case _:
                     raise TypeError(f"Unhandled type {type_} for YAML export")
+
         return yaml.safe_dump(
             {
                 name: {"type": dump_type(type_), "default": default_}
@@ -210,6 +218,7 @@ class NotebookParameters:
                 f'"catalog.json" file.'
             )
         import pystac
+
         catalog = pystac.Catalog.from_file(catalog_path)
         item_links = [link for link in catalog.links if link.rel == "item"]
         expected_names = set(self.dataset_inputs)
@@ -239,6 +248,7 @@ class NotebookParameters:
         param_name: str,
     ) -> xr.Dataset:
         import pystac
+
         item_links = [link for link in catalog.links if link.rel == "item"]
         item = next(
             filter(
