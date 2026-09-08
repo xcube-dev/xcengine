@@ -19,6 +19,13 @@ You turn a normal code cell into a parameters cell by adding a tag called
 Inspector can be opened by clicking the gear icon at the top right of the Jupyter
 Lab window.)
 
+⚠️ Whenever possible, it's advisable to make the parameters cell the **very
+first code cell** in the notebook, even before package imports. (xcengine reads
+parameters by actually executing the notebook code up to the parameters cell,
+so any packages imported before or within it must be available in the Python
+environment where xcengine is running! Putting the parameters cell first
+avoids this complication.)
+
 ![Property inspector](images/property-inspector.png)
 
 You can define as many parameters as you like in the property cell. The
