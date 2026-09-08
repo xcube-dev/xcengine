@@ -104,10 +104,13 @@ class ScriptCreator:
             params_node = nbformat.from_dict(self.notebook)
             params_node.cells = [params_node.cells[params_cell_index]]
             params_code, _ = exporter.from_notebook_node(params_node)
+            cwd = pathlib.Path(self.nb_path).parent
+            # nb_path might be a URL, so cwd is not guaranteed to be a valid
+            # directory. We check for this below.
             self.nb_params = NotebookParameters.from_code(
                 params_code,
                 setup_code=setup_code,
-                cwd=pathlib.Path(self.nb_path).parent
+                cwd=cwd if cwd.is_dir() else None
             )
             self.notebook.cells.insert(
                 params_cell_index + 1,
@@ -256,7 +259,7 @@ class ImageBuilder:
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
-            with fsspec.open(self.environment, "r") as fh:
+            with fsspec.open(str(self.environment), "r") as fh:
                 env_def = yaml.safe_load(fh)
         else:
             LOGGER.warning(
