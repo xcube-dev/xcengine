@@ -107,6 +107,7 @@ class ScriptCreator:
             self.nb_params = NotebookParameters.from_code(
                 params_code,
                 setup_code=setup_code,
+                cwd=pathlib.Path(self.nb_path).parent
             )
             self.notebook.cells.insert(
                 params_cell_index + 1,
@@ -222,6 +223,7 @@ class ImageBuilder:
 
         self.include_directory = nb_config.get("include_directory", False)
         self.build_includes = nb_config.get("build_includes", [])
+        LOGGER.info(f"Build includes: {self.build_includes}")
 
         if environment is not None:
             self.environment = environment
@@ -276,6 +278,7 @@ class ImageBuilder:
         if self.build_includes:
             for pathspec in self.build_includes:
                 path = (pathlib.Path(self.notebook).parent / pathlib.Path(pathspec)).resolve()
+                LOGGER.info(f"Copying build include: {path}")
                 if path.is_dir():
                     shutil.copytree(path, build_includes_path / path.name)
                 elif path.is_file():
@@ -373,23 +376,23 @@ class ImageBuilder:
     def write_dockerfile(destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        copy_build_includes = f"COPY build-includes/* ./\n"
-        copy_runtime_includes = "COPY runtime-includes/* ./\n"
+        copy_build_includes = f"COPY --chown=mambauser:mambauser build-includes ./\n"
+        copy_runtime_includes = "COPY --chown=mambauser:mambauser runtime-includes ./\n"
         with open(destination, "w") as fh:
             fh.write(textwrap.dedent(f"""\
             FROM mambaorg/micromamba:2.9-cuda13.2.1-ubuntu24.04
-            COPY Dockerfile Dockerfile
-            COPY environment.yml environment.yml
+            COPY --chown=mambauser:mambauser Dockerfile Dockerfile
+            COPY --chown=mambauser:mambauser environment.yml environment.yml
             {copy_build_includes}
             RUN micromamba install -y -n base -f environment.yml && \\
               micromamba clean --all --yes
             WORKDIR /home/mambauser
             {copy_runtime_includes}
-            COPY user_code.py user_code.py
-            COPY execute.py execute.py
-            COPY parameters.yaml parameters.yaml
-            COPY parameters.py parameters.py
-            COPY util.py util.py
+            COPY --chown=mambauser:mambauser user_code.py user_code.py
+            COPY --chown=mambauser:mambauser execute.py execute.py
+            COPY --chown=mambauser:mambauser parameters.yaml parameters.yaml
+            COPY --chown=mambauser:mambauser parameters.py parameters.py
+            COPY --chown=mambauser:mambauser util.py util.py
             ENTRYPOINT [ \\
               "/usr/local/bin/_entrypoint.sh", \\
               "python", \\
