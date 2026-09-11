@@ -19,6 +19,7 @@ _MEDIA_TYPES: Mapping[str, str] = {
     "csv": "text/csv",
 }
 
+
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
         if path.is_dir():
@@ -55,7 +56,7 @@ def write_stac(
         else:
             raise TypeError(
                 "{ds_id} cannot be catalogued because type {type(ds)}"
-                            "is not supported."
+                "is not supported."
             )
         output_name = f"{ds_name}.{suffix}"
         output_path = stac_root / "output" / output_name
@@ -137,8 +138,10 @@ def save_datasets(
         elif isinstance(ds, pd.DataFrame):
             ds.to_csv(output_subpath / f"{ds_id}.csv")
         else:
-            raise TypeError("{ds_id} cannot be saved because type {type(ds)}"
-                            "is not supported.")
+            raise TypeError(
+                "{ds_id} cannot be saved because type {type(ds)}"
+                "is not supported."
+            )
 
     # The "datasets_saved" file is a flag to indicate to a runner when
     # processing is complete, though the xcetool runner doesn't yet use it.
@@ -149,10 +152,10 @@ def save_datasets(
 
 
 def start_server(
-        datasets: Mapping[str, xr.Dataset],
-        saved_datasets: dict[str, pathlib.Path],
-        args: argparse.Namespace,
-        logger: logging.Logger
+    datasets: Mapping[str, xr.Dataset],
+    saved_datasets: dict[str, pathlib.Path],
+    args: argparse.Namespace,
+    logger: logging.Logger,
 ):
     try:
         import xcube.util.plugin

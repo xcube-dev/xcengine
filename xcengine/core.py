@@ -1,5 +1,4 @@
 # Copyright (c) 2024-2026 by Brockmann Consult GmbH
-# Copyright (c) 2024-2026 by Brockmann Consult GmbH
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 
@@ -110,7 +109,7 @@ class ScriptCreator:
             self.nb_params = NotebookParameters.from_code(
                 params_code,
                 setup_code=setup_code,
-                cwd=cwd if cwd.is_dir() else None
+                cwd=cwd if cwd.is_dir() else None,
             )
             self.notebook.cells.insert(
                 params_cell_index + 1,
@@ -303,11 +302,7 @@ class ImageBuilder:
                     "Build directory is inside notebook directory -- "
                     "aborting build to avoid infinite recursive copy."
                 )
-            shutil.copytree(
-                nb_dir,
-                rti_dir,
-                symlinks=True
-            )
+            shutil.copytree(nb_dir, rti_dir, symlinks=True)
 
         self.write_dockerfile(self.build_dir / "Dockerfile")
         return None if skip_build else self._build_image()
@@ -392,8 +387,12 @@ class ImageBuilder:
     def write_dockerfile(destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        copy_build_includes = f"COPY --chown=mambauser:mambauser build-includes ./\n"
-        copy_runtime_includes = "COPY --chown=mambauser:mambauser runtime-includes ./\n"
+        copy_build_includes = (
+            f"COPY --chown=mambauser:mambauser build-includes ./\n"
+        )
+        copy_runtime_includes = (
+            "COPY --chown=mambauser:mambauser runtime-includes ./\n"
+        )
         with open(destination, "w") as fh:
             fh.write(textwrap.dedent(f"""\
             FROM mambaorg/micromamba:2.9-cuda13.2.1-ubuntu24.04

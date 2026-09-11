@@ -44,7 +44,10 @@ class NotebookParameters:
 
     @classmethod
     def from_code(
-        cls, code: str, setup_code: str | None = None, cwd: pathlib.Path | None = None
+        cls,
+        code: str,
+        setup_code: str | None = None,
+        cwd: pathlib.Path | None = None,
     ) -> "NotebookParameters":
         variables = cls.extract_variables(code, setup_code, cwd)
         config = variables.pop(cls.config_var_name, (None, None))
@@ -58,6 +61,7 @@ class NotebookParameters:
     @classmethod
     def from_yaml(cls, yaml_content: str | typing.IO) -> "NotebookParameters":
         input_data = yaml.safe_load(yaml_content)
+
         def convert_type(yaml_spec: str) -> type | str:
             match yaml_spec:
                 case "int" | "float" | "bool" | "str" | "Dataset":
@@ -65,6 +69,7 @@ class NotebookParameters:
                 case "Directory":
                     return "Directory"
             raise ValueError(f'Unknown type in YAML: "{yaml_spec}"')
+
         return cls(
             {
                 k: (
@@ -82,14 +87,18 @@ class NotebookParameters:
 
     @classmethod
     def extract_variables(
-        cls, code: str, setup_code: str | None = None, cwd: pathlib.Path | None = None
+        cls,
+        code: str,
+        setup_code: str | None = None,
+        cwd: pathlib.Path | None = None,
     ) -> dict[str, tuple[type | str, Any]]:
         if cwd is None:
             return cls._extract_variables(code, setup_code)
         else:
             LOGGER.info(f"Using CWD {cwd} for parameter extraction")
-            path_setup = (f"import sys\n"
-                          f"sys.path.insert(0, '{cwd.resolve()}')\n\n")
+            path_setup = (
+                f"import sys\n" f"sys.path.insert(0, '{cwd.resolve()}')\n\n"
+            )
             with contextlib.chdir(cwd):
                 return cls._extract_variables(code, path_setup + setup_code)
 
@@ -98,6 +107,7 @@ class NotebookParameters:
         cls, code: str, setup_code: str | None = None
     ) -> dict[str, tuple[type | str, Any]]:
         import os
+
         LOGGER.info(f"CWD: {os.getcwd()}")
         LOGGER.info(f"Setup: {setup_code}")
         if setup_code is None:
@@ -110,7 +120,9 @@ class NotebookParameters:
         annotations = cls.read_annotations(code)
         new_vars = locals_.keys() - old_locals.keys()
         new_var_dict = {
-            k: cls.make_param_tuple(k, locals_[k]) for k in new_vars if not k.startswith("__")
+            k: cls.make_param_tuple(k, locals_[k])
+            for k in new_vars
+            if not k.startswith("__")
         }
         for k in new_var_dict:
             if k in annotations and annotations[k] == "'EOInput'":
@@ -150,8 +162,11 @@ class NotebookParameters:
             "label": var_name,
             "doc": var_name,
             "type": self.cwl_type(type_),
-            "default": {"class": "Directory", "location": default_}
-                if type_ == "Directory" else default_,
+            "default": (
+                {"class": "Directory", "location": default_}
+                if type_ == "Directory"
+                else default_
+            ),
         }
 
     def get_cwl_commandline_input(self, var_name: str) -> dict[str, Any]:
@@ -168,6 +183,7 @@ class NotebookParameters:
                     return type_
                 case _:
                     raise TypeError(f"Unhandled type {type_} for YAML export")
+
         return yaml.safe_dump(
             {
                 name: {"type": dump_type(type_), "default": default_}
@@ -227,6 +243,7 @@ class NotebookParameters:
                 f'"catalog.json" file.'
             )
         import pystac
+
         catalog = pystac.Catalog.from_file(catalog_path)
         item_links = [link for link in catalog.links if link.rel == "item"]
         expected_names = set(self.dataset_inputs)
@@ -256,6 +273,7 @@ class NotebookParameters:
         param_name: str,
     ) -> xr.Dataset:
         import pystac
+
         item_links = [link for link in catalog.links if link.rel == "item"]
         item = next(
             filter(
