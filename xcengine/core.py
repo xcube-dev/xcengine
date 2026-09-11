@@ -293,7 +293,8 @@ class ImageBuilder:
         if self.include_directory:
             shutil.copytree(
                 pathlib.Path(self.notebook).parent,
-                self.build_dir / "runtime-includes"
+                self.build_dir / "runtime-includes",
+                symlinks=True
             )
 
         self.write_dockerfile(self.build_dir / "Dockerfile")
