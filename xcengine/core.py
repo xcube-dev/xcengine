@@ -278,11 +278,17 @@ class ImageBuilder:
             fh.write(yaml.safe_dump(env_def))
         build_includes_path = self.build_dir / "build-includes"
         build_includes_path.mkdir()
+        nb_dir = pathlib.Path(self.notebook).parent
         if self.build_includes:
             for pathspec in self.build_includes:
-                path = (pathlib.Path(self.notebook).parent / pathlib.Path(pathspec)).resolve()
+                path = (nb_dir / pathlib.Path(pathspec)).resolve()
                 LOGGER.info(f"Copying build include: {path}")
                 if path.is_dir():
+                    if path in build_includes_path.parents:
+                        raise RuntimeError(
+                            f"{build_includes_path} is inside {path} -- "
+                            "aborting build to avoid infinite recursive copy."
+                        )
                     shutil.copytree(path, build_includes_path / path.name)
                 elif path.is_file():
                     shutil.copy2(path, build_includes_path)
@@ -291,9 +297,15 @@ class ImageBuilder:
                         f"{path} is neither a file nor a directory"
                     )
         if self.include_directory:
+            rti_dir = self.build_dir / "runtime-includes"
+            if nb_dir in rti_dir.parents:
+                raise RuntimeError(
+                    "Build directory is inside notebook directory -- "
+                    "aborting build to avoid infinite recursive copy."
+                )
             shutil.copytree(
-                pathlib.Path(self.notebook).parent,
-                self.build_dir / "runtime-includes",
+                nb_dir,
+                rti_dir,
                 symlinks=True
             )
 
