@@ -9,8 +9,15 @@ import pathlib
 import shutil
 from typing import NamedTuple, Mapping
 
+import pandas as pd
 import xarray as xr
 from xarray import Dataset
+
+_MEDIA_TYPES: Mapping[str, str] = {
+    "netcdf": "application/x-netcdf",
+    "zarr": "application/vnd.zarr",
+    "csv": "text/csv",
+}
 
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
@@ -39,15 +46,24 @@ def write_stac(
         href=f"{catalog_path}",
     )
     for ds_name, ds in datasets.items():
-        output_format = ds.attrs.get("xcengine_output_format", "zarr")
-        suffix = "nc" if output_format == "netcdf" else "zarr"
+        if isinstance(ds, xr.Dataset):
+            output_format = ds.attrs.get("xcengine_output_format", "zarr")
+            suffix = "nc" if output_format == "netcdf" else "zarr"
+        elif isinstance(ds, pd.DataFrame):
+            output_format = "csv"
+            suffix = "csv"
+        else:
+            raise TypeError(
+                "{ds_id} cannot be catalogued because type {type(ds)}"
+                            "is not supported."
+            )
         output_name = f"{ds_name}.{suffix}"
         output_path = stac_root / "output" / output_name
         asset_parent = stac_root / ds_name
         asset_parent.mkdir(parents=True, exist_ok=True)
         asset_path = asset_parent / output_name
         if output_path.exists():
-            # If a Zarr for this asset is present in the output directory,
+            # If a file/dir for this asset is present in the output directory,
             # move it into the corresponding STAC subdirectory. If not,
             # we write the same STAC items with the same asset links anyway
             # and assume that the caller will take care of actually writing
@@ -62,11 +78,7 @@ def write_stac(
             # https://planetarycomputer.microsoft.com/api/stac/v1/collections/terraclimate
             # uses the similar "application/vnd+zarr" but RFC 6838 mandates
             # "." rather than "+".
-            media_type=(
-                "application/x-netcdf"
-                if output_format == "netcdf"
-                else "application/vnd.zarr"
-            ),
+            media_type=_MEDIA_TYPES[output_format],
             title=ds.attrs.get("title", ds_name),
         )
 
@@ -112,15 +124,22 @@ def save_datasets(
     for ds_id, ds in datasets.items():
         output_subpath = output_path / (ds_id if eoap_mode else "output")
         output_subpath.mkdir(parents=True, exist_ok=True)
-        output_format = ds.attrs.get("xcengine_output_format", "zarr")
-        suffix = "nc" if output_format == "netcdf" else "zarr"
-        dataset_path = output_subpath / f"{ds_id}.{suffix}"
-        saved_datasets[ds_id] = dataset_path
+        if isinstance(ds, xr.Dataset):
+            output_format = ds.attrs.get("xcengine_output_format", "zarr")
+            suffix = "nc" if output_format == "netcdf" else "zarr"
+            dataset_path = output_subpath / f"{ds_id}.{suffix}"
+            saved_datasets[ds_id] = dataset_path
 
-        if output_format == "netcdf":
-            ds.to_netcdf(dataset_path)
+            if output_format == "netcdf":
+                ds.to_netcdf(dataset_path)
+            else:
+                ds.to_zarr(dataset_path)
+        elif isinstance(ds, pd.DataFrame):
+            ds.to_csv(output_subpath / f"{ds_id}.csv")
         else:
-            ds.to_zarr(dataset_path)
+            raise TypeError("{ds_id} cannot be saved because type {type(ds)}"
+                            "is not supported.")
+
     # The "datasets_saved" file is a flag to indicate to a runner when
     # processing is complete, though the xcetool runner doesn't yet use it.
     (output_path / "datasets_saved").touch()
