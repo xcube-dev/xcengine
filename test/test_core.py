@@ -462,3 +462,16 @@ def test_image_builder_build_dir(
 
     cwl = image_builder.create_cwl()
     assert "cwlVersion" in cwl
+
+
+def test_image_builder_nonexistent_dep(tmp_path):
+    image_builder = ImageBuilder(
+        pathlib.Path(__file__).parent / "data" / "nonexistent-build-dep.ipynb",
+        pathlib.Path(__file__).parent / "data" / "my-environment.yml",
+        tmp_path / "build",
+        None
+    )
+    with pytest.raises(ValueError):
+        image_builder.build(
+            skip_build=True, with_eoap=True, with_xcube=False
+        )

@@ -189,6 +189,12 @@ def test_save_datasets(tmp_path, dataframe, dataset, eoap_mode, ds2_format):
         assert not catalogue_path.exists()
 
 
+def test_save_datasets_unknown_type(tmp_path):
+    with pytest.raises(TypeError):
+        # noinspection bad-argument-type
+        save_datasets({"foo": 42}, tmp_path, eoap_mode=True)
+
+
 def test_start_server():
     import xcube.core.new
 
