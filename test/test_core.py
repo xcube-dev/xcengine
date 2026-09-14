@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import pathlib
+import shutil
 import signal
 import threading
 import time
@@ -475,3 +476,34 @@ def test_image_builder_nonexistent_dep(tmp_path):
         image_builder.build(
             skip_build=True, with_eoap=True, with_xcube=False
         )
+
+
+def test_image_builder_build_dir_in_notebook_dir(tmp_path):
+    nbdir = tmp_path / "nbdir"
+    shutil.copytree(pathlib.Path(__file__).parent / "data", nbdir)
+    (build_dir := nbdir / "build").mkdir()
+
+    image_builder = ImageBuilder(
+        nbdir / "include-dir.ipynb",
+        nbdir / "my-environment.yml",
+        build_dir,
+        None,
+    )
+    with pytest.raises(RuntimeError) as e:
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
+        assert "aborting build" in str(e.value) in e
+
+
+def test_image_builder_build_dir_in_build_deps_dir(tmp_path):
+    nbdir = tmp_path / "nbdir"
+    shutil.copytree(pathlib.Path(__file__).parent / "data", nbdir)
+    (build_dir := nbdir / "mylocalpackage" / "build").mkdir()
+    image_builder = ImageBuilder(
+        nbdir / "build-includes.ipynb",
+        nbdir / "my-environment.yml",
+        build_dir,
+        None,
+    )
+    with pytest.raises(RuntimeError) as e:
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
+        assert "aborting build" in str(e.value) in e
