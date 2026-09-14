@@ -21,7 +21,6 @@ _MEDIA_TYPES: Mapping[str, str] = {
     "csv": "text/csv",
 }
 
-
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
         if path.is_dir():
