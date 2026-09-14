@@ -429,7 +429,7 @@ def test_image_builder_build_dir(
             raise RuntimeError(f"Unknown env type {env_type}")
 
     image_builder = ImageBuilder(
-        pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb",
+        pathlib.Path(__file__).parent / "data" / "paramtest.ipynb",
         env_param,
         build_dir,
         None,
@@ -446,6 +446,10 @@ def test_image_builder_build_dir(
     output_env = yaml.safe_load(build_env_path.read_text())
     assert {"name", "channels", "dependencies", "variables"} <= set(output_env)
     assert type(output_env["variables"]["XCENGINE_VERSION"]) is str
+    assert (build_dir / "runtime-includes" / "data.tar").is_file()
+    assert (
+        build_dir / "build-includes" / "mylocalpackage" / "pyproject.toml"
+    ).is_file()
     if env_type != "none":
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]

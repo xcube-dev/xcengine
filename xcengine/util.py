@@ -7,11 +7,13 @@ from datetime import datetime
 import json
 import pathlib
 import shutil
-from typing import NamedTuple, Mapping
+from typing import NamedTuple, Mapping, TypeAlias
 
 import pandas as pd
 import xarray as xr
 from xarray import Dataset
+
+StageOutTypes: TypeAlias = xr.Dataset | pd.DataFrame
 
 _MEDIA_TYPES: Mapping[str, str] = {
     "netcdf": "application/x-netcdf",
@@ -29,7 +31,7 @@ def clear_directory(directory: pathlib.Path) -> None:
 
 
 def write_stac(
-    datasets: Mapping[str, xr.Dataset], stac_root: pathlib.Path
+    datasets: Mapping[str, StageOutTypes], stac_root: pathlib.Path
 ) -> None:
     try:
         import pystac
@@ -55,7 +57,7 @@ def write_stac(
             suffix = "csv"
         else:
             raise TypeError(
-                "{ds_id} cannot be catalogued because type {type(ds)}"
+                f"{ds_name} cannot be catalogued because type {type(ds)} "
                 "is not supported."
             )
         output_name = f"{ds_name}.{suffix}"
@@ -116,7 +118,9 @@ def write_stac(
 
 
 def save_datasets(
-    datasets: Mapping[str, Dataset], output_path: pathlib.Path, eoap_mode: bool
+    datasets: Mapping[str, StageOutTypes],
+    output_path: pathlib.Path,
+    eoap_mode: bool,
 ) -> dict[str, pathlib.Path]:
     saved_datasets = {}
     # EOAP doesn't require an "output" subdirectory (output can go anywhere
@@ -139,7 +143,7 @@ def save_datasets(
             ds.to_csv(output_subpath / f"{ds_id}.csv")
         else:
             raise TypeError(
-                "{ds_id} cannot be saved because type {type(ds)}"
+                f"{ds_id} cannot be saved because type {type(ds)} "
                 "is not supported."
             )
 
