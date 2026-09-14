@@ -470,12 +470,10 @@ def test_image_builder_nonexistent_dep(tmp_path):
         pathlib.Path(__file__).parent / "data" / "nonexistent-build-dep.ipynb",
         pathlib.Path(__file__).parent / "data" / "my-environment.yml",
         tmp_path / "build",
-        None
+        None,
     )
     with pytest.raises(ValueError):
-        image_builder.build(
-            skip_build=True, with_eoap=True, with_xcube=False
-        )
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
 
 
 def test_image_builder_build_dir_in_notebook_dir(tmp_path):
