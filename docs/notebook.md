@@ -19,6 +19,13 @@ You turn a normal code cell into a parameters cell by adding a tag called
 Inspector can be opened by clicking the gear icon at the top right of the Jupyter
 Lab window.)
 
+⚠️ Whenever possible, it's advisable to make the parameters cell the **very
+first code cell** in the notebook, even before package imports. (xcengine reads
+parameters by actually executing the notebook code up to the parameters cell,
+so any packages imported before or within it must be available in the Python
+environment where xcengine is running! Putting the parameters cell first
+avoids this complication.)
+
 ![Property inspector](images/property-inspector.png)
 
 You can define as many parameters as you like in the property cell. The
@@ -48,6 +55,13 @@ name `xcengine_config`. Available configuration settings are:
     you can enter the final registry tag here and push the image once it's
     been built by xcengine. If no tag is specified, xcengine will create one
     based on the current date and time.
+-   `build_includes`: a list of strings defining paths to local Python
+    packages. These packages will be installed into the Docker container
+    image's Python environment. See *Installing local Python packages in the
+    container's Python environment* below for more details.
+-   `include_directory`: include the whole of the notebook's parent directory
+    in the built image. See *Including local data and Python modules when*
+    *building an image* below for more details.
 
 Some of these configuration settings can also be set on the command line.
 
@@ -113,3 +127,106 @@ is always set to the version of xcengine that created the container image. If
 your notebook code needs to determine whether it's running inside an xcengine
 container, you can check whether this variable is set (e.g. using
 `os.environ`).
+
+## Installing local Python packages in the container's Python environment
+
+In most cases, a notebook's environment can be fully defined by an
+`environment.yml` file which only lists dependencies from public sources
+(e.g. conda-forge and PyPI). Sometimes, however, you may need to use a
+package which is available on your local computer, but has not been published
+to any public channel. xcengine provides a way to do this, as detailed
+below. You can also find an example in the `inclusions.ipynb` notebook. 
+
+### 1. Reference the local package in your `environment.yml` file
+
+In the `environment.yml` file defining the notebook's environment, list
+any local package dependencies in the `pip` section, for example:
+
+```yaml
+name: myenvironment
+channels:
+  - conda-forge
+dependencies:
+  - python >=3.11
+  - xarray
+  - pip:
+    - ./mylocalpackage/
+    - ./someotherpackage.whl
+```
+
+Referenced packages can be pre-built wheels or Python package directories.
+
+Note that, when building the Python environment, all these packages are
+copied into the same directory as the environment file, so the environment
+file should reference them in this location with a `./` prefix as shown above.
+
+### 2. List the paths to local packages in the parameters cell
+
+Use the configuration key `build_includes` in the xcengine configuration
+dictionary in the parameter cell to list the packages to be included. The
+value should be a list of strings, each one giving a path to a package.
+These paths are resolved relative to the notebook itself. Such a configuration
+might look as follows:
+
+```python
+xcengine_config = dict(
+    environment_file="../environment.yml",
+    build_includes=["../mylocalpackage", "../someotherpackage.whl"]
+)
+```
+
+With this configuration, the referenced packages will be copied into the
+build context and installed in the container's Python environment when the
+Docker container image is being built.
+
+## Including local data and Python modules when building an image
+
+If your notebook relies on additional data or Python modules to run, you
+can include these using the `include_directory` configuration option:
+
+```python
+xcengine_config = dict(
+    include_directory=True,
+)
+```
+
+This will bundle everything in the notebook's directory along with the
+notebook-derived code in the container image. (It's not currently
+possible to include run-time code and data from outside the notebook's
+directory.)
+
+If you reference files relative to your notebook, you will need a minor
+modification to do this in the generated container.
+In the notebook, we can usually assume that the current directory (CWD)
+is the notebook's directory and look for data there. In an EOAP, the current
+directory is usually not the same as the script's directory, so we have to
+explicitly define the data directory relative to the script's own path.
+You can do this with a simple code snippet:
+
+```python
+import pathlib
+try:
+    # Find the script's parent directory, if we're running as a script.
+    datadir = pathlib.Path(__file__).parent
+except NameError:
+    # If __file__ is not defined, assume we're running in a notebook
+    # and look for the data file in the current working directory.
+    datadir = pathlib.Path.cwd()
+```
+
+Now the variable `datadir` will point to the directory containing the
+notebook, and instead of reading data from that directory with e.g.
+
+```python
+df = pd.read_csv("input-data.csv")
+```
+
+you can use
+
+```python
+df = pd.read_csv(datadir / "input-data.csv")
+```
+
+which will work in both the notebook and the generated application package.
+
+You can also find an example in the `inclusions.ipynb` notebook.

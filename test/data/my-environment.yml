@@ -3,3 +3,6 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.11
+  - pip:
+    - ./mylocalpackage
+    - ./mylocalpackage/dist/mylocalpackage-0.0.1-py3-none-any.whl

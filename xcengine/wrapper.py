@@ -39,6 +39,7 @@ exec(user_code)
 
 import argparse
 
+import pandas as pd
 import xarray as xr
 
 
@@ -61,7 +62,8 @@ def main():
     datasets = {
         name: thing
         for name, thing in globals().copy().items()
-        if isinstance(thing, xr.Dataset) and not name.startswith("_")
+        if isinstance(thing, (xr.Dataset, pd.DataFrame))
+        and not name.startswith("_")
     }
 
     saved_datasets = {}
