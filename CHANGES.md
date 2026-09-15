@@ -7,7 +7,10 @@
 * Allow creation of EOAP-only and xcube-server-only images, omitting
   unnecessary dependencies (#56)
 * Add support for notebook-assisted stage-in (#23, #91, #95)
-* Make stage-out catalogue geometry field GeoJSON-compliant (#101)
+* Make stage-out catalogue geometry field GeoJSON-compliant (#101
+* Support inclusion of local build-time and/or runtime dependencies during
+  Docker image build (#98)
+* Support staging out of pandas `DataFrame` objects as CSV files (#100)
 
 ## Changes in 0.1.2
 
