@@ -84,11 +84,13 @@ def write_stac(
             geometry={
                 "type": "Polygon",
                 "coordinates": [
-                    [bb.left, bb.bottom],
-                    [bb.left, bb.top],
-                    [bb.right, bb.top],
-                    [bb.right, bb.bottom],
-                    [bb.left, bb.bottom],
+                    [
+                        [bb.left, bb.bottom],
+                        [bb.left, bb.top],
+                        [bb.right, bb.top],
+                        [bb.right, bb.bottom],
+                        [bb.left, bb.bottom],
+                    ]
                 ],
             },
             bbox=[bb.left, bb.bottom, bb.right, bb.top],
