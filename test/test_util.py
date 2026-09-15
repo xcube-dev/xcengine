@@ -94,6 +94,7 @@ def test_write_stac(
             ],
             "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
         }
+        catalog.validate_all()
 
 
 def test_write_stac_unknown_type(tmp_path):
