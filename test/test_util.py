@@ -84,6 +84,7 @@ def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
             ],
             "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
         }
+        catalog.validate_all()
 
 
 def test_write_stac_no_pystac(tmp_path, dataset):
