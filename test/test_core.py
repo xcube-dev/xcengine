@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import pathlib
+import shutil
 import signal
 import threading
 import time
@@ -429,7 +430,7 @@ def test_image_builder_build_dir(
             raise RuntimeError(f"Unknown env type {env_type}")
 
     image_builder = ImageBuilder(
-        pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb",
+        pathlib.Path(__file__).parent / "data" / "paramtest.ipynb",
         env_param,
         build_dir,
         None,
@@ -446,6 +447,10 @@ def test_image_builder_build_dir(
     output_env = yaml.safe_load(build_env_path.read_text())
     assert {"name", "channels", "dependencies", "variables"} <= set(output_env)
     assert type(output_env["variables"]["XCENGINE_VERSION"]) is str
+    assert (build_dir / "runtime-includes" / "data.tar").is_file()
+    assert (
+        build_dir / "build-includes" / "mylocalpackage" / "pyproject.toml"
+    ).is_file()
     if env_type != "none":
         assert output_env["name"] == env_def["name"]
         assert output_env["channels"] == env_def["channels"]
@@ -458,3 +463,45 @@ def test_image_builder_build_dir(
 
     cwl = image_builder.create_cwl()
     assert "cwlVersion" in cwl
+
+
+def test_image_builder_nonexistent_dep(tmp_path):
+    image_builder = ImageBuilder(
+        pathlib.Path(__file__).parent / "data" / "nonexistent-build-dep.ipynb",
+        pathlib.Path(__file__).parent / "data" / "my-environment.yml",
+        tmp_path / "build",
+        None,
+    )
+    with pytest.raises(ValueError):
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
+
+
+def test_image_builder_build_dir_in_notebook_dir(tmp_path):
+    nbdir = tmp_path / "nbdir"
+    shutil.copytree(pathlib.Path(__file__).parent / "data", nbdir)
+    (build_dir := nbdir / "build").mkdir()
+
+    image_builder = ImageBuilder(
+        nbdir / "include-dir.ipynb",
+        nbdir / "my-environment.yml",
+        build_dir,
+        None,
+    )
+    with pytest.raises(RuntimeError) as e:
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
+        assert "aborting build" in str(e.value) in e
+
+
+def test_image_builder_build_dir_in_build_deps_dir(tmp_path):
+    nbdir = tmp_path / "nbdir"
+    shutil.copytree(pathlib.Path(__file__).parent / "data", nbdir)
+    (build_dir := nbdir / "mylocalpackage" / "build").mkdir()
+    image_builder = ImageBuilder(
+        nbdir / "build-includes.ipynb",
+        nbdir / "my-environment.yml",
+        build_dir,
+        None,
+    )
+    with pytest.raises(RuntimeError) as e:
+        image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
+        assert "aborting build" in str(e.value) in e

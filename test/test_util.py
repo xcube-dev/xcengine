@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import patch
 
+import pandas as pd
 import pystac
 import pytest
 import xarray as xr
@@ -38,6 +39,11 @@ def dataset():
     )
 
 
+@pytest.fixture
+def dataframe():
+    return pd.DataFrame({"v": [1, 2, 3]})
+
+
 def test_clear_directory(tmp_path):
     subdir = tmp_path / "foo" / "bar" / "baz"
     os.makedirs(subdir)
@@ -52,25 +58,28 @@ def test_clear_directory(tmp_path):
 
 @pytest.mark.parametrize("write_datasets", [False, True])
 @pytest.mark.parametrize("pre_existing_catalog", [False, True])
-def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
-    datasets = {"ds1": dataset, "ds2": dataset.copy()}
-    datasets["ds2"].attrs["xcengine_output_format"] = "netcdf"
+def test_write_stac(
+    tmp_path, dataframe, dataset, write_datasets, pre_existing_catalog
+):
+    assets = {"df": dataframe, "ds1": dataset, "ds2": dataset.copy()}
+    assets["ds2"].attrs["xcengine_output_format"] = "netcdf"
     if write_datasets:
         output_path = tmp_path / "output"
         output_path.mkdir()
-        datasets["ds1"].to_zarr(output_path / ("ds1.zarr"))
-        datasets["ds2"].to_netcdf(output_path / ("ds2.nc"))
+        assets["df"].to_csv(output_path / "df.csv")
+        assets["ds1"].to_zarr(output_path / ("ds1.zarr"))
+        assets["ds2"].to_netcdf(output_path / ("ds2.nc"))
     catalog_path = tmp_path / "catalog.json"
     if pre_existing_catalog:
         catalog_path.touch()
-    write_stac(datasets, tmp_path)
+    write_stac(assets, tmp_path)
     if pre_existing_catalog:
         # Check that our fake catalogue was not overwritten
         assert catalog_path.stat().st_size == 0
     else:
         catalog = pystac.Catalog.from_file(catalog_path)
         items = set(catalog.get_items(recursive=True))
-        assert {item.id for item in items} == datasets.keys()
+        assert {item.id for item in items} == assets.keys()
         catalog.make_all_asset_hrefs_absolute()
         data_asset_hrefs = {
             item.id: [
@@ -79,12 +88,19 @@ def test_write_stac(tmp_path, dataset, write_datasets, pre_existing_catalog):
             for item in items
         }
         assert data_asset_hrefs == {
+            "df": [str((tmp_path / "df" / "df.csv").resolve(strict=False))],
             "ds1": [
                 str((tmp_path / "ds1" / "ds1.zarr").resolve(strict=False))
             ],
             "ds2": [str((tmp_path / "ds2" / "ds2.nc").resolve(strict=False))],
         }
         catalog.validate_all()
+
+
+def test_write_stac_unknown_type(tmp_path):
+    with pytest.raises(TypeError):
+        # noinspection bad-argument-type
+        write_stac({"foo": 42}, tmp_path)
 
 
 def test_write_stac_no_pystac(tmp_path, dataset):
@@ -150,15 +166,16 @@ def test_start_server_no_xcube(dataset):
 
 @pytest.mark.parametrize("eoap_mode", [False, True])
 @pytest.mark.parametrize("ds2_format", [None, "zarr", "netcdf"])
-def test_save_datasets(tmp_path, dataset, eoap_mode, ds2_format):
-    datasets = {"ds1": dataset, "ds2": dataset.copy()}
+def test_save_datasets(tmp_path, dataframe, dataset, eoap_mode, ds2_format):
+    assets = {"df": dataframe, "ds1": dataset, "ds2": dataset.copy()}
     if ds2_format is not None:
-        datasets["ds2"].attrs["xcengine_output_format"] = ds2_format
-    save_datasets(datasets, tmp_path, eoap_mode)
+        assets["ds2"].attrs["xcengine_output_format"] = ds2_format
+    save_datasets(assets, tmp_path, eoap_mode)
 
     def outdir(ds_id):
         return tmp_path / (ds_id if eoap_mode else "output")
 
+    assert (outdir("df") / "df.csv").is_file()
     assert (outdir("ds1") / "ds1.zarr").is_dir()
     ds2_suffix = "nc" if ds2_format == "netcdf" else "zarr"
     ds2_path = outdir("ds2") / f"ds2.{ds2_suffix}"
@@ -171,6 +188,12 @@ def test_save_datasets(tmp_path, dataset, eoap_mode, ds2_format):
         assert catalogue_path.is_file()
     else:
         assert not catalogue_path.exists()
+
+
+def test_save_datasets_unknown_type(tmp_path):
+    with pytest.raises(TypeError):
+        # noinspection bad-argument-type
+        save_datasets({"foo": 42}, tmp_path, eoap_mode=True)
 
 
 def test_start_server():

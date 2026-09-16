@@ -103,9 +103,13 @@ class ScriptCreator:
             params_node = nbformat.from_dict(self.notebook)
             params_node.cells = [params_node.cells[params_cell_index]]
             params_code, _ = exporter.from_notebook_node(params_node)
+            cwd = pathlib.Path(self.nb_path).parent
+            # nb_path might be a URL, so cwd is not guaranteed to be a valid
+            # directory. We check for this below.
             self.nb_params = NotebookParameters.from_code(
                 params_code,
                 setup_code=setup_code,
+                cwd=cwd if cwd.is_dir() else None,
             )
             self.notebook.cells.insert(
                 params_cell_index + 1,
@@ -190,6 +194,8 @@ class ImageBuilder:
 
     tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
     environment: pathlib.Path | str | None = None
+    include_directory: bool = False
+    build_includes: list[pathlib.Path | str] = []
 
     def __init__(
         self,
@@ -216,6 +222,10 @@ class ImageBuilder:
                 LOGGER.info(f"No tag in notebook; using {self.tag}")
         else:
             self.tag = tag
+
+        self.include_directory = nb_config.get("include_directory", False)
+        self.build_includes = nb_config.get("build_includes", [])
+        LOGGER.info(f"Build includes: {self.build_includes}")
 
         if environment is not None:
             self.environment = environment
@@ -248,7 +258,7 @@ class ImageBuilder:
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
         if self.environment:
-            with fsspec.open(self.environment, "r") as fh:
+            with fsspec.open(str(self.environment), "r") as fh:
                 env_def = yaml.safe_load(fh)
         else:
             LOGGER.warning(
@@ -265,6 +275,35 @@ class ImageBuilder:
         )
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
+        build_includes_path = self.build_dir / "build-includes"
+        build_includes_path.mkdir()
+        nb_dir = pathlib.Path(self.notebook).parent
+        if self.build_includes:
+            for pathspec in self.build_includes:
+                path = (nb_dir / pathlib.Path(pathspec)).resolve()
+                LOGGER.info(f"Copying build include: {path}")
+                if path.is_dir():
+                    if path in build_includes_path.parents:
+                        raise RuntimeError(
+                            f"{build_includes_path} is inside {path} -- "
+                            "aborting build to avoid infinite recursive copy."
+                        )
+                    shutil.copytree(path, build_includes_path / path.name)
+                elif path.is_file():
+                    shutil.copy2(path, build_includes_path)
+                else:
+                    raise ValueError(
+                        f"{path} is neither a file nor a directory"
+                    )
+        if self.include_directory:
+            rti_dir = self.build_dir / "runtime-includes"
+            if nb_dir in rti_dir.parents:
+                raise RuntimeError(
+                    "Build directory is inside notebook directory -- "
+                    "aborting build to avoid infinite recursive copy."
+                )
+            shutil.copytree(nb_dir, rti_dir, symlinks=True)
+
         self.write_dockerfile(self.build_dir / "Dockerfile")
         return None if skip_build else self._build_image()
 
@@ -348,19 +387,27 @@ class ImageBuilder:
     def write_dockerfile(destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
         destination.parent.mkdir(parents=True, exist_ok=True)
+        copy_build_includes = (
+            f"COPY --chown=mambauser:mambauser build-includes ./\n"
+        )
+        copy_runtime_includes = (
+            "COPY --chown=mambauser:mambauser runtime-includes ./\n"
+        )
         with open(destination, "w") as fh:
-            fh.write(textwrap.dedent("""\
+            fh.write(textwrap.dedent(f"""\
             FROM mambaorg/micromamba:2.9-cuda13.2.1-ubuntu24.04
-            COPY Dockerfile Dockerfile
-            COPY environment.yml environment.yml
+            COPY --chown=mambauser:mambauser Dockerfile Dockerfile
+            COPY --chown=mambauser:mambauser environment.yml environment.yml
+            {copy_build_includes}
             RUN micromamba install -y -n base -f environment.yml && \\
               micromamba clean --all --yes
             WORKDIR /home/mambauser
-            COPY user_code.py user_code.py
-            COPY execute.py execute.py
-            COPY parameters.yaml parameters.yaml
-            COPY parameters.py parameters.py
-            COPY util.py util.py
+            {copy_runtime_includes}
+            COPY --chown=mambauser:mambauser user_code.py user_code.py
+            COPY --chown=mambauser:mambauser execute.py execute.py
+            COPY --chown=mambauser:mambauser parameters.yaml parameters.yaml
+            COPY --chown=mambauser:mambauser parameters.py parameters.py
+            COPY --chown=mambauser:mambauser util.py util.py
             ENTRYPOINT [ \\
               "/usr/local/bin/_entrypoint.sh", \\
               "python", \\

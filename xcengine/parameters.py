@@ -1,4 +1,5 @@
 import builtins
+import contextlib
 import logging
 import os
 import pathlib
@@ -43,9 +44,12 @@ class NotebookParameters:
 
     @classmethod
     def from_code(
-        cls, code: str, setup_code: str | None = None
+        cls,
+        code: str,
+        setup_code: str | None = None,
+        cwd: pathlib.Path | None = None,
     ) -> "NotebookParameters":
-        variables = cls.extract_variables(code, setup_code)
+        variables = cls.extract_variables(code, setup_code, cwd)
         config = variables.pop(cls.config_var_name, (None, None))
         if config[1] is not None:
             if type(config[1]) is not dict:
@@ -83,8 +87,29 @@ class NotebookParameters:
 
     @classmethod
     def extract_variables(
+        cls,
+        code: str,
+        setup_code: str | None = None,
+        cwd: pathlib.Path | None = None,
+    ) -> dict[str, tuple[type | str, Any]]:
+        if cwd is None:
+            return cls._extract_variables(code, setup_code)
+        else:
+            LOGGER.info(f"Using CWD {cwd} for parameter extraction")
+            path_setup = (
+                f"import sys\n" f"sys.path.insert(0, '{cwd.resolve()}')\n\n"
+            )
+            with contextlib.chdir(cwd):
+                return cls._extract_variables(code, path_setup + setup_code)
+
+    @classmethod
+    def _extract_variables(
         cls, code: str, setup_code: str | None = None
     ) -> dict[str, tuple[type | str, Any]]:
+        import os
+
+        LOGGER.info(f"CWD: {os.getcwd()}")
+        LOGGER.info(f"Setup: {setup_code}")
         if setup_code is None:
             locals_: dict[str, object] = {}
             old_locals = {}
