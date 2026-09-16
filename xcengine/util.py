@@ -33,7 +33,7 @@ class _Bounds:
     y1: float
 
     @classmethod
-    def from_ds(cls, ds: xr.Dataset | pd.DataFrame) -> _Bounds:
+    def from_ds(cls, ds: xr.Dataset | pd.DataFrame) -> "_Bounds":
         keys = [
             "geospatial_" + k
             for k in ["lon_min", "lat_min", "lon_max", "lat_max"]
