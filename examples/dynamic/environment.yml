@@ -2,6 +2,8 @@ name: xce-example-1
 channels:
   - conda-forge
 dependencies:
-  - python >=3.10
-  - xcube >=1.8.3
+  - python >=3.11
   - matplotlib-base
+  - numpy
+  - pandas
+  - xarray

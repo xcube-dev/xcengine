@@ -11,6 +11,7 @@
 * Support inclusion of local build-time and/or runtime dependencies during
   Docker image build (#98)
 * Support staging out of pandas `DataFrame` objects as CSV files (#100)
+* Update dynamic example notebook to not require xcube (#107)
 
 ## Changes in 0.1.2
 
