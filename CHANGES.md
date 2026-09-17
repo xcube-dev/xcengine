@@ -11,6 +11,8 @@
 * Support inclusion of local build-time and/or runtime dependencies during
   Docker image build (#98)
 * Support staging out of pandas `DataFrame` objects as CSV files (#100)
+* Stage-out: set STAC geometry and bounding box from bounding box limits
+  in `attrs` dictionary (#104)
 
 ## Changes in 0.1.2
 

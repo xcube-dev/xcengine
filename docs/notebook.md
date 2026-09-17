@@ -100,10 +100,13 @@ can use to find staged-in datasets.
 No additional code or configuration is needed for datasets to be written
 (‘staged out’) from Application Packages or served when the container image is
 run in xcube Server/Viewer mode. xcengine will automatically output or serve
-any instance of `xarray.DataSet` which is in scope when the notebook's code
-has finished executing. If you're created some datasets which you *don't* wish
-to be written, you can use the Python [`del`
-statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
+any instances of `xarray.Dataset` or `pandas.DataFrame` which are in scope when
+the notebook's code has finished executing. Subtypes of these datatypes are
+also detected, so e.g. `geopandas.GeoDataFrame` will be output or served like
+its parent type `pandas.DataFrame`.
+
+If you're created some datasets which you *don't* wish to be written, you can
+use the Python [`del` statement](https://docs.python.org/3/reference/simple_stmts.html#the-del-statement)
 to delete them at the end of the notebook to remove them, e.g.
 
 ```python
@@ -112,13 +115,34 @@ del my_temporary_dataset
 
 ### Setting dataset output type
 
-By default, all `xarray.DataSet` instances are written as Zarr. But you can
+By default, all `xarray.Dataset` instances are written as Zarr. But you can
 force them to be written as NetCDF by setting an attribute on the dataset,
 like this:
 
 ```python
 my_dataset.attrs["xcengine_output_format"] = "netcdf"
 ```
+
+`pandas.DataFrame` instances are always written as CSV.
+
+### Setting STAC metadata
+
+In Application Package mode, output data are accompanied by
+[STAC records](https://stacspec.org/) describing the data. Some of the data
+for STAC records can be derived from metadata attributes on the datasets
+themselves. xcengine functionality for automatically deriving STAC metadata
+is currently limited to setting the bounding box via metadata in the global
+attributes dictionary in the `attrs` attribute of the dataset. The following
+attributes are used by xcengine when exporting data:
+
+- `geospatial_lon_min`
+- `geospatial_lat_min`
+- `geospatial_lon_max`
+- `geospatial_lat_max`
+
+If a dataset has a geographical extent which can be represented by these
+limits, it is recommended to ensure that they are set. If they are not present,
+xcengine will use default values.
 
 ## Determining whether your code is running in an xcengine container
 
