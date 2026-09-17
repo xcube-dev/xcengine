@@ -295,15 +295,16 @@ class ImageBuilder:
                     raise ValueError(
                         f"{path} is neither a file nor a directory"
                     )
+        rti_dir = self.build_dir / "runtime-includes"
         if self.include_directory:
-            rti_dir = self.build_dir / "runtime-includes"
             if nb_dir in rti_dir.parents:
                 raise RuntimeError(
                     "Build directory is inside notebook directory -- "
                     "aborting build to avoid infinite recursive copy."
                 )
             shutil.copytree(nb_dir, rti_dir, symlinks=True)
-
+        else:
+            rti_dir.mkdir()
         self.write_dockerfile(self.build_dir / "Dockerfile")
         return None if skip_build else self._build_image()
 
