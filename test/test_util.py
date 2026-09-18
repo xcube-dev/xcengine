@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pandas as pd
 import pystac
 import pytest
+import shapely
 import xarray as xr
 from xcube.server.webservers.tornado import TornadoFramework
 
@@ -101,6 +102,22 @@ def test_write_stac_unknown_type(tmp_path):
     with pytest.raises(TypeError):
         # noinspection bad-argument-type
         write_stac({"foo": 42}, tmp_path)
+
+
+def test_set_stac_geometry_from_dataset(tmp_path, dataset):
+    datasets = {"ds1": dataset}
+    bounds = dict(lon_min=10, lat_min=40, lon_max=20, lat_max=50)
+    for a in bounds:
+        dataset.attrs["geospatial_" + a] = bounds[a]
+    write_stac(datasets, tmp_path)
+    catalog = pystac.Catalog.from_file(tmp_path / "catalog.json")
+    items = list(catalog.get_items(recursive=True))
+    assert len(items) == 1
+    item = items[0]
+    assert item.bbox == list(bounds.values())
+    assert shapely.bounds(shapely.polygons(item.geometry["coordinates"]))[
+        0
+    ].tolist() == list(bounds.values())
 
 
 def test_write_stac_no_pystac(tmp_path, dataset):

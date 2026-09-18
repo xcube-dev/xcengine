@@ -2,16 +2,19 @@
 # Permissions are hereby granted under the terms of the MIT License:
 # https://opensource.org/licenses/MIT.
 import argparse
+from dataclasses import dataclass
 import logging
 from datetime import datetime
 import json
 import pathlib
 import shutil
-from typing import NamedTuple, Mapping, TypeAlias
+from typing import Mapping, TypeAlias
 
 import pandas as pd
 import xarray as xr
-from xarray import Dataset
+
+LOGGER = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 StageOutTypes: TypeAlias = xr.Dataset | pd.DataFrame
 
@@ -20,6 +23,46 @@ _MEDIA_TYPES: Mapping[str, str] = {
     "zarr": "application/vnd.zarr",
     "csv": "text/csv",
 }
+
+
+@dataclass
+class _Bounds:
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+    @classmethod
+    def from_ds(cls, ds: xr.Dataset | pd.DataFrame) -> "_Bounds":
+        keys = [
+            "geospatial_" + k
+            for k in ["lon_min", "lat_min", "lon_max", "lat_max"]
+        ]
+        if set(keys) <= set(ds.attrs.keys()):
+            return cls(*[ds.attrs[k] for k in keys])
+        else:
+            LOGGER.warning(
+                "No geospatial bounds in dataset attributes -- using defaults"
+            )
+            return cls(0, -90, 360, 90)
+
+    def to_stac_geometry(self) -> dict[str, str | list[list[list[float]]]]:
+        return {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [self.x0, self.y0],
+                    [self.x0, self.y1],
+                    [self.x1, self.y1],
+                    [self.x1, self.y0],
+                    [self.x0, self.y0],
+                ]
+            ],
+        }
+
+    def to_stac_bbox(self) -> list[float]:
+        return [self.x0, self.y0, self.x1, self.y1]
+
 
 def clear_directory(directory: pathlib.Path) -> None:
     for path in directory.iterdir():
@@ -84,29 +127,11 @@ def write_stac(
             title=ds.attrs.get("title", ds_name),
         )
 
-        class Bounds(NamedTuple):
-            left: float
-            bottom: float
-            right: float
-            top: float
-
-        # TODO determine and set actual bounds here
-        bb = Bounds(0, -90, 360, 90)
+        bb = _Bounds.from_ds(ds)
         item = pystac.Item(
             id=ds_name,
-            geometry={
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [bb.left, bb.bottom],
-                        [bb.left, bb.top],
-                        [bb.right, bb.top],
-                        [bb.right, bb.bottom],
-                        [bb.left, bb.bottom],
-                    ]
-                ],
-            },
-            bbox=[bb.left, bb.bottom, bb.right, bb.top],
+            geometry=bb.to_stac_geometry(),
+            bbox=bb.to_stac_bbox(),
             datetime=None,
             start_datetime=datetime(2000, 1, 1),  # TODO set actual start
             end_datetime=datetime(2001, 1, 1),  # TODO set actual end
