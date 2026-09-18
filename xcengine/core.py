@@ -275,9 +275,11 @@ class ImageBuilder:
         )
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
-        build_includes_path = self.build_dir / "build-includes"
+        build_includes_path = (self.build_dir / "build-includes").resolve()
+        LOGGER.info(f"Build includes path: {build_includes_path}")
         build_includes_path.mkdir()
-        nb_dir = pathlib.Path(self.notebook).parent
+        nb_dir = pathlib.Path(self.notebook).resolve().parent
+        LOGGER.info(f"Notebook directory: {nb_dir}")
         if self.build_includes:
             for pathspec in self.build_includes:
                 path = (nb_dir / pathlib.Path(pathspec)).resolve()
@@ -285,7 +287,9 @@ class ImageBuilder:
                 if path.is_dir():
                     if path in build_includes_path.parents:
                         raise RuntimeError(
-                            f"{build_includes_path} is inside {path} -- "
+                            f"Build includes staging directory "
+                            f"{build_includes_path} is inside build include "
+                            f"source directory {path} -- "
                             "aborting build to avoid infinite recursive copy."
                         )
                     shutil.copytree(path, build_includes_path / path.name)
@@ -297,10 +301,13 @@ class ImageBuilder:
                     )
         rti_dir = self.build_dir / "runtime-includes"
         if self.include_directory:
+            rti_dir = (self.build_dir / "runtime-includes").resolve()
+            LOGGER.info(f"Run-time includes directory: {rti_dir}")
             if nb_dir in rti_dir.parents:
                 raise RuntimeError(
-                    "Build directory is inside notebook directory -- "
-                    "aborting build to avoid infinite recursive copy."
+                    f"Run-time include staging directory {rti_dir} "
+                    f"is inside notebook directory {nb_dir} "
+                    "-- aborting build to avoid infinite recursive copy."
                 )
             shutil.copytree(nb_dir, rti_dir, symlinks=True)
         else:
