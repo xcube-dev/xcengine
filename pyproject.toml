@@ -33,7 +33,7 @@ dependencies = [
   "nbconvert",
   "nbformat",
   "pystac",
-  "pyyaml",
+  "pyyaml>=5.1",  # need >=5.1 for sort_keys
   "xarray",
   "xcube-core"
 ]
