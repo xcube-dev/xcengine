@@ -154,6 +154,7 @@ def save_datasets(
     # Note that EOAP runners typically override the image-specified CWD.
     for ds_id, ds in datasets.items():
         output_subpath = output_path / (ds_id if eoap_mode else "output")
+        LOGGER.info(f"Saving {ds_id} to {output_subpath}...")
         output_subpath.mkdir(parents=True, exist_ok=True)
         if isinstance(ds, xr.Dataset):
             output_format = ds.attrs.get("xcengine_output_format", "zarr")
