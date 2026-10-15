@@ -165,16 +165,24 @@ def image_cli():
     is_flag=True,
     help="Do not add xcube server/viewer functionality to built image",
 )
+@click.option(
+    "-i",
+    "--base-image",
+    type=str,
+    default=None,
+    help="Docker image reference for a custom micromamba base image to use",
+)
 @notebook_argument
 def build(
     build_dir: pathlib.Path,
     notebook: pathlib.Path,
-    environment: pathlib.Path,
+    environment: pathlib.Path | None,
     tag: str,
     eoap: pathlib.Path,
     skip_build: bool,
     no_eoap: bool,
     no_xcube: bool,
+    base_image: str | None,
 ) -> None:
     if environment is None:
         LOGGER.info("No environment file specified on command line.")
@@ -189,7 +197,7 @@ def build(
         with_eoap: bool
         with_xcube: bool
 
-    init_args = InitArgs(notebook=notebook, environment=environment, tag=tag)
+    init_args = InitArgs(notebook=notebook, environment=environment, tag=tag, base_image=base_image)
     build_args = BuildArgs(
         skip_build=skip_build, with_eoap=not no_eoap, with_xcube=not no_xcube
     )
