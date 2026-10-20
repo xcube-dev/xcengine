@@ -367,16 +367,20 @@ class ImageBuilder:
     def add_packages_to_environment(
         conda_env: dict, packages: Iterable[str]
     ) -> dict:
+        import re
+
         deps: list = conda_env["dependencies"]
 
-        def ensure_present(pkg: str):
-            if not any(
-                map(
-                    lambda d: isinstance(d, str) and d.startswith(f"{pkg}="),
-                    deps,
-                )
-            ):
-                deps.append(pkg)
+        def pkg_match(spec: str, name: str) -> bool:
+            if isinstance(spec, str):
+                m = re.match("^[^ =<>!]*", spec)
+                return (m.group() == name) if m else False
+            else:
+                return False
+
+        def ensure_present(pkg_name: str):
+            if not any(map(lambda d: pkg_match(d, pkg_name), deps)):
+                deps.append(pkg_name)
 
         for package in packages:
             ensure_present(package)
