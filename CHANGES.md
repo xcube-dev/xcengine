@@ -4,6 +4,8 @@
 * Use a default Docker base image without CUDA (#111)
 * Make Docker base image configurable (#112)
 * Deduplicate repeated entries in generated environment files (#113)
+* When building an image, generate an environment file with all dependencies
+  and exact versions and build numbers (#114)
 
 ## Changes in 0.1.3
 

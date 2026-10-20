@@ -97,6 +97,20 @@ container indefinitely as an xcube server and viewer instance. You can stop
 the container and force `xcetool` to exit by pressing ctrl-C on the command
 line (or by sending it an interrupt signal in some other way).
 
+### `xcetool image export-env`
+
+When building an image, xcetool exports a full and explicit conda environment
+file to the path `/tmp/exact-environment.yml` within the image. This file
+explicitly lists *all* installed packages, including transitive dependencies,
+with exact versions, build numbers, and checksums, ensuring maximum
+traceability and reproducibility. `xcetool image export-env` is a convenience
+command to copy this file out of a built image (which can also be accomplished
+using standard Docker tools). The command supports the following option:
+
+-   `-o`, `--output` `FILE`  Write the environment to the specified file.
+    If this option is omitted, the environment defition will be written to
+    standard output.
+
 ### `xcetool make-script` 
 
 This subcommand does not generate a container image, but a directory
@@ -127,4 +141,3 @@ pushing it will attempt to upload the image to the repository `helloworld`
 under the account `alice` on the registry `quay.io`. See the [Docker
 documentation](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-registry/)
 for more details.
-
