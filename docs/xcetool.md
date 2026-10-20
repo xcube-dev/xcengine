@@ -50,6 +50,8 @@ Options:
 -   `-x`, `--no-xcube`: Do not add xcube server/viewer functionality to
     the built image. The image will only be useable in EOAP mode. This
     option can help to reduce the size of the image.
+-   `-i`, `--base-image` `TEXT` Docker image reference for a custom
+    micromamba base image to use
 -   `--help`: Show a help message for this subcommand and exit.
 
 ### `xcetool image run`

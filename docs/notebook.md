@@ -47,9 +47,11 @@ name `xcengine_config`. Available configuration settings are:
 -   `environment_file`: the name of a YAML file defining a [conda
     environment](https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
     (these are often called `environment.yml`). If an environment file is not
-    specified in the notebook or on the command line, xcetool will try to
-    deduce the environment automatically. This cannot be done 100% reliably,
-    so it is **strongly recommended** to provide an environment file.
+    specified in the notebook or on the command line, xcetool will look for
+    a file name `environment.yml` in the same directory as the notebook. If
+    none is found, xcengine will try to deduce the environment automatically.
+    This cannot be done 100% reliably, so it is **strongly recommended**
+    to provide an environment file.
 -   `container_image_tag`: the tag applied to the Docker container image that
     xcengine builds. If you plan to push the image to a public registry,
     you can enter the final registry tag here and push the image once it's
@@ -62,6 +64,9 @@ name `xcengine_config`. Available configuration settings are:
 -   `include_directory`: include the whole of the notebook's parent directory
     in the built image. See *Including local data and Python modules when*
     *building an image* below for more details.
+-   `base_image`: a Docker image reference for a custom micromamba base image
+    to use. By default, xcengine uses a recent Ubuntu-based micromamba image
+    without CUDA. The default setting should be adequate for most use cases. 
 
 Some of these configuration settings can also be set on the command line.
 

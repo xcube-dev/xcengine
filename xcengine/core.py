@@ -193,9 +193,14 @@ class ImageBuilder:
     """
 
     tag_format: ClassVar[str] = "%Y.%m.%d.%H.%M.%S"
-    environment: pathlib.Path | str | None = None
-    include_directory: bool = False
-    build_includes: list[pathlib.Path | str] = []
+    default_base_image: ClassVar[str] = "mambaorg/micromamba:2.9.0-ubuntu24.04"
+
+    notebook: pathlib.Path | str
+    environment: pathlib.Path | str | None
+    include_directory: bool
+    build_includes: list[pathlib.Path | str]
+    base_image: str
+    tag: str
 
     def __init__(
         self,
@@ -203,17 +208,21 @@ class ImageBuilder:
         environment: pathlib.Path | str | None,
         build_dir: pathlib.Path,
         tag: str | None,
+        base_image: str | None = None,
     ):
         self.notebook = notebook
         self.build_dir = build_dir
         self.script_creator = ScriptCreator(self.notebook)
         nb_config = self.script_creator.nb_params.config
+        self.base_image = base_image or nb_config.get(
+            "base_image", self.default_base_image
+        )
         if tag is None:
             LOGGER.info("No tag specified; looking for one in the notebook.")
             nb_tag = nb_config.get("container_image_tag", None)
             if nb_tag is not None:
                 LOGGER.info(f"Using tag {nb_tag} from notebook.")
-                self.tag = nb_tag
+                self.tag = str(nb_tag)
             else:
                 timestamp = datetime.datetime.now(datetime.UTC).strftime(
                     self.tag_format
@@ -257,6 +266,7 @@ class ImageBuilder:
         with_xcube: bool = True,
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
+        LOGGER.info("Notebook converted")
         if self.environment:
             with fsspec.open(str(self.environment), "r") as fh:
                 env_def = yaml.safe_load(fh)
@@ -391,26 +401,20 @@ class ImageBuilder:
         LOGGER.info("Docker image built.")
         return image
 
-    @staticmethod
-    def write_dockerfile(destination: pathlib.Path) -> None:
+    def write_dockerfile(self, destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
+        LOGGER.info(f"Using base image {self.base_image}")
         destination.parent.mkdir(parents=True, exist_ok=True)
-        copy_build_includes = (
-            f"COPY --chown=mambauser:mambauser build-includes ./\n"
-        )
-        copy_runtime_includes = (
-            "COPY --chown=mambauser:mambauser runtime-includes ./\n"
-        )
         with open(destination, "w") as fh:
             fh.write(textwrap.dedent(f"""\
-            FROM mambaorg/micromamba:2.9-cuda13.2.1-ubuntu24.04
+            FROM {self.base_image}
             COPY --chown=mambauser:mambauser Dockerfile Dockerfile
             COPY --chown=mambauser:mambauser environment.yml environment.yml
-            {copy_build_includes}
+            COPY --chown=mambauser:mambauser build-includes ./
             RUN micromamba install -y -n base -f environment.yml && \\
               micromamba clean --all --yes
             WORKDIR /home/mambauser
-            {copy_runtime_includes}
+            COPY --chown=mambauser:mambauser runtime-includes ./
             COPY --chown=mambauser:mambauser user_code.py user_code.py
             COPY --chown=mambauser:mambauser execute.py execute.py
             COPY --chown=mambauser:mambauser parameters.yaml parameters.yaml

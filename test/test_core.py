@@ -373,7 +373,9 @@ def test_image_builder_notebook_config(tmp_path):
 
 
 def test_image_builder_write_dockerfile(tmp_path):
-    ImageBuilder.write_dockerfile(
+    nb_path = pathlib.Path(__file__).parent / "data" / "paramtest.ipynb"
+    image_builder = ImageBuilder(nb_path, None, tmp_path, None)
+    image_builder.write_dockerfile(
         dockerfilepath := tmp_path / "as-yet-nonexistent-dir" / "Dockerfile"
     )
     with open(dockerfilepath) as fh:
