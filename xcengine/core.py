@@ -264,6 +264,7 @@ class ImageBuilder:
         with_xcube: bool = True,
     ) -> Image | None:
         self.script_creator.convert_notebook_to_script(self.build_dir)
+        LOGGER.info("Notebook converted")
         if self.environment:
             with fsspec.open(str(self.environment), "r") as fh:
                 env_def = yaml.safe_load(fh)

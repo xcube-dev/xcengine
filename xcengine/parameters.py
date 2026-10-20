@@ -109,11 +109,16 @@ class NotebookParameters:
         import os
 
         LOGGER.info(f"CWD: {os.getcwd()}")
-        LOGGER.info(f"Setup: {setup_code}")
         if setup_code is None:
+            LOGGER.info("No setup code")
             locals_: dict[str, object] = {}
             old_locals = {}
         else:
+            import re
+            setup_summary = re.sub("[\n\r]", " / ", setup_code)
+            if len(setup_summary) > 40:
+                setup_summary = f"{setup_summary[:19]}...{setup_summary[-18:]}"
+            LOGGER.info(f"Setup code: {setup_summary}")
             exec(setup_code, globals(), locals_ := {})
             old_locals = locals_.copy()
         exec(code, globals(), locals_)
