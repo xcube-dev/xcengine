@@ -334,6 +334,36 @@ def run(
     )
 
 
+@image_cli.command(
+    help="Export a conda environment file from an xcengine Docker image. "
+)
+@click.argument(
+    "tag",
+    type=str,
+)
+@click.option(
+    "-o",
+    "--output-file",
+    type=click.Path(
+        path_type=pathlib.Path, dir_okay=False, file_okay=True, exists=False
+    ),
+    default=None,
+)
+def export_env(tag: str, output_file: pathlib.Path) -> None:
+    import docker
+
+    client = docker.from_env()
+    env_data = client.containers.run(
+        tag,
+        "cat /tmp/exact-environment.yml",
+        entrypoint="/usr/local/bin/_entrypoint.sh",
+    ).decode()
+    if output_file:
+        output_file.write_text(env_data)
+    else:
+        print(env_data)
+
+
 def open_browser_when_server_up(check_url: str, viewer_url: str) -> None:
     while True:
         try:
