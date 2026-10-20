@@ -100,7 +100,9 @@ class NotebookParameters:
                 f"import sys\n" f"sys.path.insert(0, '{cwd.resolve()}')\n\n"
             )
             with contextlib.chdir(cwd):
-                return cls._extract_variables(code, path_setup + setup_code)
+                return cls._extract_variables(
+                    code, path_setup + (setup_code or "")
+                )
 
     @classmethod
     def _extract_variables(
@@ -115,6 +117,7 @@ class NotebookParameters:
             old_locals = {}
         else:
             import re
+
             setup_summary = re.sub("[\n\r]", " / ", setup_code)
             if len(setup_summary) > 40:
                 setup_summary = f"{setup_summary[:19]}...{setup_summary[-18:]}"

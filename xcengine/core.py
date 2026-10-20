@@ -208,13 +208,15 @@ class ImageBuilder:
         environment: pathlib.Path | str | None,
         build_dir: pathlib.Path,
         tag: str | None,
-        base_image: str | None = None
+        base_image: str | None = None,
     ):
         self.notebook = notebook
         self.build_dir = build_dir
         self.script_creator = ScriptCreator(self.notebook)
         nb_config = self.script_creator.nb_params.config
-        self.base_image = base_image or nb_config.get("base_image", self.default_base_image)
+        self.base_image = base_image or nb_config.get(
+            "base_image", self.default_base_image
+        )
         if tag is None:
             LOGGER.info("No tag specified; looking for one in the notebook.")
             nb_tag = nb_config.get("container_image_tag", None)
@@ -401,6 +403,7 @@ class ImageBuilder:
 
     def write_dockerfile(self, destination: pathlib.Path) -> None:
         LOGGER.info(f"Writing Dockerfile to {destination}...")
+        LOGGER.info(f"Using base image {self.base_image}")
         destination.parent.mkdir(parents=True, exist_ok=True)
         with open(destination, "w") as fh:
             fh.write(textwrap.dedent(f"""\

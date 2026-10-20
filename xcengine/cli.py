@@ -197,7 +197,12 @@ def build(
         with_eoap: bool
         with_xcube: bool
 
-    init_args = InitArgs(notebook=notebook, environment=environment, tag=tag, base_image=base_image)
+    init_args = InitArgs(
+        notebook=notebook,
+        environment=environment,
+        tag=tag,
+        base_image=base_image,
+    )
     build_args = BuildArgs(
         skip_build=skip_build, with_eoap=not no_eoap, with_xcube=not no_xcube
     )

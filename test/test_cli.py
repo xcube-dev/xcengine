@@ -107,7 +107,7 @@ def test_image_build(
         environment=(env_path if specify_env else None),
         tag=tag,
         build_dir=(build_dir if specify_dir else ANY),
-        base_image=None
+        base_image=None,
     )
     instance_mock.build.assert_called_once_with(
         skip_build=skip_build, with_eoap=not no_eoap, with_xcube=not no_xcube
