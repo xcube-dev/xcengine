@@ -232,10 +232,12 @@ def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     assert (build_dir / "environment.yml").is_file()
     from_env_mock.assert_not_called()
 
+
 @patch("docker.from_env")
 @pytest.mark.parametrize("use_o_flag", [False, True])
 def test_export_env(from_env_mock, tmp_path, use_o_flag):
     import docker
+
     client_mock = Mock(docker.client.DockerClient)
     from_env_mock.return_value = client_mock
     content = "- Fake environment file\n"
@@ -252,13 +254,16 @@ def test_export_env(from_env_mock, tmp_path, use_o_flag):
     cli_runner = CliRunner()
     result = cli_runner.invoke(
         cli,
-        [
-            "image",
-            "export-env"] + ([
-            "-o",
-            str(output_path), ] if use_o_flag else []) + [
-            test_tag := "sometag"
-        ],
+        ["image", "export-env"]
+        + (
+            [
+                "-o",
+                str(output_path),
+            ]
+            if use_o_flag
+            else []
+        )
+        + [test_tag := "sometag"],
     )
     assert result.exit_code == 0
     if use_o_flag:
