@@ -3,6 +3,8 @@ import re
 import urllib
 from unittest.mock import patch, ANY, MagicMock
 import pytest
+from unittest.mock import Mock
+
 import yaml
 from click.testing import CliRunner
 
@@ -229,3 +231,37 @@ def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     assert (build_dir / "Dockerfile").is_file()
     assert (build_dir / "environment.yml").is_file()
     from_env_mock.assert_not_called()
+
+@patch("docker.from_env")
+@pytest.mark.parametrize("use_o_flag", [False, True])
+def test_export_env(from_env_mock, tmp_path, use_o_flag):
+    import docker
+    client_mock = Mock(docker.client.DockerClient)
+    from_env_mock.return_value = client_mock
+    content = "- Fake environment file\n"
+    output_path = tmp_path / "env.yaml"
+
+    def run_mock(tag: str, command: str, entrypoint: str) -> bytes:
+        assert tag == test_tag
+        assert command == "cat /tmp/exact-environment.yml"
+        assert entrypoint == "/usr/local/bin/_entrypoint.sh"
+        return content.encode()
+
+    client_mock.containers.run = run_mock
+
+    cli_runner = CliRunner()
+    result = cli_runner.invoke(
+        cli,
+        [
+            "image",
+            "export-env"] + ([
+            "-o",
+            str(output_path), ] if use_o_flag else []) + [
+            test_tag := "sometag"
+        ],
+    )
+    assert result.exit_code == 0
+    if use_o_flag:
+        assert output_path.read_text() == content
+    else:
+        assert result.stdout == content

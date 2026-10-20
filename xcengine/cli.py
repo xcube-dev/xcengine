@@ -361,7 +361,7 @@ def export_env(tag: str, output_file: pathlib.Path) -> None:
     if output_file:
         output_file.write_text(env_data)
     else:
-        print(env_data)
+        print(env_data, end="")
 
 
 def open_browser_when_server_up(check_url: str, viewer_url: str) -> None:
