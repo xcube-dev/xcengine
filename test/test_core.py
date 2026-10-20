@@ -507,3 +507,22 @@ def test_image_builder_build_dir_in_build_deps_dir(tmp_path):
     with pytest.raises(RuntimeError) as e:
         image_builder.build(skip_build=True, with_eoap=True, with_xcube=False)
         assert "aborting build" in str(e.value) in e
+
+
+@pytest.mark.parametrize(
+    "additions", [[], ["xcube"], ["xcube=1.2"], ["xcube>1.1"], ["xcube >=1"]]
+)
+def test_add_packages_to_environment(additions):
+    import re
+
+    conda_env = {
+        "name": "foo",
+        "channels": ["conda-forge"],
+        "dependencies": ["python >=3.11", "somepackage"] + additions,
+    }
+    ImageBuilder.add_packages_to_environment(conda_env, ["xcube"])
+
+    def pkg_name(pkg_spec: str) -> str:
+        return re.match("^[^ =<>!]*", pkg_spec).group()
+
+    assert list(map(pkg_name, conda_env["dependencies"])).count("xcube") == 1
