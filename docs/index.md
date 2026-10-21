@@ -23,7 +23,10 @@ links to further resources.
 5. [Testing and running Application Packages](running-eoaps.md)
 6. [Further documentation and resources](resources.md)
 
-xcengine is developed as part of the [Open Earth Monitor
+The xcengine source code repository is hosted at
+<https://github.com/xcube-dev/xcengine>.
+
+xcengine was initially developed as part of the [Open Earth Monitor
 Cyberinfrastructure](https://earthmonitor.org/) project, which has received
 funding from the European Union's Horizon Europe research and innovation
 programme under grant agreement No. 101059548.

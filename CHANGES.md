@@ -1,4 +1,4 @@
-## Changes in 0.1.4 (in development)
+## Changes in 0.1.4
 
 * Improve dynamic example notebook (#115)
 * Use a default Docker base image without CUDA (#111)

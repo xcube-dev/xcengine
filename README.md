@@ -14,56 +14,10 @@ parameterized, headlessly runnable forms:
 
 # Documentation
 
-Documentation is hosted at <https://xcube-dev.github.io/xcengine/>.
-
-# Defining parameters in a notebook
-
-xcengine uses the same convention as
-[papermill](https://papermill.readthedocs.io/)
-for defining parameters in a notebook. All parameters should be set as
-Python variables in the same notebook code cell, and that cell should be
-designated as the parameter cell by giving it the tag `parameters`. In
-JupyterLab, you can do this using the property inspector (⚙⚙ icon in the
-right sidebar). See the [papermill
-documentation](https://papermill.readthedocs.io/en/latest/usage-parameterize.html#designate-parameters-for-a-cell)
-for more details.
-
-During conversion, `xcetool` will detect any variables that are set in the
-parameters cell and make them available as command-line parameters for the
-output script and container, and as workflow parameters for the application
-package.
-
-# Customizing output formats
-
-An xcengine-generated script or image can automatically write all
-`xarray.Dataset` objects from the notebook code to disk, for example to be
-staged out as EO Application Package outputs. By default, Zarr format is
-used, but this can be changed to NetCDF on a per-dataset basis by applying
-an attribute:
-
-```python
-my_dataset.attrs["xcengine_output_format"] = "netcdf"
-```
-
-# xcetool usage
-
-xcengine provides a command-line tool called `xcetool`, which has several
-subcommands for different functions. Use the `--help` option with these
-subcommands to get more details on usage.
-
-## `xcetool make-script`
-
-Convert a Jupyter notebook to a non-interactive Python script.
-
-## `xcetool image build`
-
-Convert a Jupyter notebook to a Docker container image. This subcommand can
-additionally produce a Common Workflow Language (CWL) file defining an OGC
-[Earth Observation Application Package](https://docs.ogc.org/bp/20-089r1.html) which uses the container image.
-
-## `xcetool image run`
-
-Run a Docker container using an image converted from a Jupyter notebook.
+Full documentation is hosted at <https://xcube-dev.github.io/xcengine/>.
+It is built from sources in the
+[docs](https://github.com/xcube-dev/xcengine/tree/main/docs) subdirectory
+of the git repository.
 
 # Acknowledgements
 

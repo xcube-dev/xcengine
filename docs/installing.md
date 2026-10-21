@@ -1,7 +1,7 @@
 # Installing xcengine
 
-xcengine is developed on GitHub and distributed as a Conda package on the
-conda-forge channel.
+xcengine is developed on [GitHub](https://github.com/xcube-dev/xcengine)
+and distributed as a Conda package on the conda-forge channel.
 
 ## Installing from conda-forge
 
