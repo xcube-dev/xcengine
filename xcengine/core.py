@@ -12,6 +12,7 @@ import tarfile
 import subprocess
 import logging
 import pathlib
+import shutil
 import textwrap
 import time
 import uuid
@@ -330,6 +331,9 @@ class ImageBuilder:
     @staticmethod
     def export_conda_env() -> dict:
         LOGGER.info("Exporting conda environment")
+        executable = shutil.which("conda") or shutil.which("mamba") or shutil.which("micromamba")
+        if not executable:
+            raise RuntimeError("No coda, mamba or micromamba executable available")
         conda_process = subprocess.run(
             ["conda", "env", "export"], capture_output=True
         )
