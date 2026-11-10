@@ -333,6 +333,11 @@ class ImageBuilder:
         conda_process = subprocess.run(
             ["conda", "env", "export"], capture_output=True
         )
+        if conda_process.returncode != 0:
+            LOGGER.error("Error exporting conda environment")
+            LOGGER.error(conda_process.stdout.decode())
+            LOGGER.error(conda_process.stderr.decode())
+            conda_process.check_returncode()
         LOGGER.info("Reading environment definition")
         env_def = yaml.safe_load(conda_process.stdout)
         # Try to remove any dependencies installed from the local filesystem,
