@@ -278,11 +278,13 @@ class ImageBuilder:
             )
             env_def = self.export_conda_env()
         # We need xcube for server/viewer and pystac for EOAP stage-in/out
+        LOGGER.info("Adding xcube and/or pystac, if required")
         self.add_packages_to_environment(
             env_def,
             (["xcube"] if with_xcube else [])
             + (["pystac"] if with_eoap else []),
         )
+        LOGGER.info("Writing environment file")
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
         build_includes_path = (self.build_dir / "build-includes").resolve()
@@ -327,9 +329,11 @@ class ImageBuilder:
 
     @staticmethod
     def export_conda_env() -> dict:
+        LOGGER.info("Exporting conda environment")
         conda_process = subprocess.run(
             ["conda", "env", "export"], capture_output=True
         )
+        LOGGER.info("Reading environment definition")
         env_def = yaml.safe_load(conda_process.stdout)
         # Try to remove any dependencies installed from the local filesystem,
         # which would break environment creation within the container. This
@@ -347,6 +351,7 @@ class ImageBuilder:
         )
         pip_inspect = PipInspector()
         if pip_map:
+            LOGGER.info("Checking pip dependencies")
             assert pip_index is not None
             nonlocals = []
             for pkg in pip_map["pip"]:
