@@ -215,6 +215,7 @@ def test_image_run_open_browser(urlopen_mock, open_mock, runner_mock):
 def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     build_dir = tmp_path / "build"
     nb_path = pathlib.Path(__file__).parent / "data" / "noparamtest.ipynb"
+    assert nb_path.is_file()
     cli_runner = CliRunner()
     result = cli_runner.invoke(
         cli,
