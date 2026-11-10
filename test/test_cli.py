@@ -220,6 +220,7 @@ def test_image_skip_build_save_dockerfile_and_env(from_env_mock, tmp_path):
     result = cli_runner.invoke(
         cli,
         [
+            "-vvv",
             "image",
             "build",
             "--skip-build",
