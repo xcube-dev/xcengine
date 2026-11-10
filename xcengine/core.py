@@ -335,7 +335,7 @@ class ImageBuilder:
         if not executable:
             raise RuntimeError("No coda, mamba or micromamba executable available")
         conda_process = subprocess.run(
-            ["conda", "env", "export"], capture_output=True
+            [executable, "env", "export"], capture_output=True
         )
         if conda_process.returncode != 0:
             LOGGER.error("Error exporting conda environment")
