@@ -1,8 +1,14 @@
 # Further documentation and resources
 
-xcengine has been presented at several conferences and workshops. Most of the
-presentation materials are available online and provide a useful complement to
-this documentation.
+xcengine has been presented at several conferences and workshops, and used to
+create EOAPs in various projects. Many associated presentation materials are
+available online and provide a useful complement to the main xcengine
+documentation; some are listed below.
+
+⚠️ The materials listed below represent the state of xcengine at the time of
+their publication, and are not updated in tandem with xcengine development
+thereafter. Therefore there may be differences between the current state of
+xcengine and the features described in the materials below.
 
 - Presentation at OEMC Global Workshop 2024, Laxenburg.
 Pontus Lurcock, "Large-scale EO processing with xcube on CDSE". 
@@ -24,3 +30,10 @@ Yogesh Baljeet Singh, Norman Fomferra, Pontus Lurcock, Gunnar Brandt and
 Tejas Morbagal Harish: "From reproducible EO Workflow development to OGC
 Application Packages for Scalable Data Cube Generation and Visualisation".
 [Programme entry](https://federicorondoni.github.io/bids25/brella-wrapper.html?date=2025-10-01&showSession=749314).
+
+- xcengine was used to produce four EOAPs in the
+[ESA HEATWISE activity](https://sup.apex.esa.int/en/heatwise).
+The [HEATWISE interoperability demonstration
+page](https://esa-heatwise.github.io/heatwise-interoperability-demonstration/)
+contains descriptions of all the generated EOAPs and links to repositories
+containing their source code.

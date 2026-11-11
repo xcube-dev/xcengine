@@ -1,5 +1,8 @@
 ## Changes in 0.1.5 (in development)
 
+* Add a link to the HEATWISE project in the documentation (#123)
+* Make environment analysis more robust (#126)
+
 ## Changes in 0.1.4
 
 * Improve dynamic example notebook (#115)

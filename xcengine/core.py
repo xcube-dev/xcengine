@@ -12,6 +12,7 @@ import tarfile
 import subprocess
 import logging
 import pathlib
+import shutil
 import textwrap
 import time
 import uuid
@@ -278,11 +279,13 @@ class ImageBuilder:
             )
             env_def = self.export_conda_env()
         # We need xcube for server/viewer and pystac for EOAP stage-in/out
+        LOGGER.info("Adding xcube and/or pystac, if required")
         self.add_packages_to_environment(
             env_def,
             (["xcube"] if with_xcube else [])
             + (["pystac"] if with_eoap else []),
         )
+        LOGGER.info("Writing environment file")
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
         build_includes_path = (self.build_dir / "build-includes").resolve()
@@ -327,9 +330,19 @@ class ImageBuilder:
 
     @staticmethod
     def export_conda_env() -> dict:
+        LOGGER.info("Exporting conda environment")
+        executable = shutil.which("conda") or shutil.which("mamba") or shutil.which("micromamba")
+        if not executable:
+            raise RuntimeError("No conda, mamba or micromamba executable available")
         conda_process = subprocess.run(
-            ["conda", "env", "export"], capture_output=True
+            [executable, "env", "export"], capture_output=True
         )
+        if conda_process.returncode != 0:
+            LOGGER.error("Error exporting conda environment")
+            LOGGER.error(conda_process.stdout.decode())
+            LOGGER.error(conda_process.stderr.decode())
+            conda_process.check_returncode()
+        LOGGER.info("Reading environment definition")
         env_def = yaml.safe_load(conda_process.stdout)
         # Try to remove any dependencies installed from the local filesystem,
         # which would break environment creation within the container. This
@@ -347,6 +360,7 @@ class ImageBuilder:
         )
         pip_inspect = PipInspector()
         if pip_map:
+            LOGGER.info("Checking pip dependencies")
             assert pip_index is not None
             nonlocals = []
             for pkg in pip_map["pip"]:
