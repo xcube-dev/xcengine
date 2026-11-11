@@ -333,7 +333,7 @@ class ImageBuilder:
         LOGGER.info("Exporting conda environment")
         executable = shutil.which("conda") or shutil.which("mamba") or shutil.which("micromamba")
         if not executable:
-            raise RuntimeError("No coda, mamba or micromamba executable available")
+            raise RuntimeError("No conda, mamba or micromamba executable available")
         conda_process = subprocess.run(
             [executable, "env", "export"], capture_output=True
         )

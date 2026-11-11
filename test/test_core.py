@@ -4,6 +4,7 @@ import os
 import pathlib
 import shutil
 import signal
+from subprocess import CompletedProcess, CalledProcessError
 import threading
 import time
 
@@ -526,3 +527,21 @@ def test_add_packages_to_environment(additions):
         return re.match("^[^ =<>!]*", pkg_spec).group()
 
     assert list(map(pkg_name, conda_env["dependencies"])).count("xcube") == 1
+
+
+@patch("shutil.which")
+def test_export_conda_env_no_executable(which_mock):
+    which_mock.return_value = None
+    with pytest.raises(RuntimeError, match='No conda'):
+        ImageBuilder.export_conda_env()
+
+
+@patch("subprocess.run")
+def test_export_conda_env_conda_error(subprocess_mock):
+    def run_mock(arg_list, **kwargs):
+        return CompletedProcess(
+            args=arg_list, returncode=1, stdout=b"foo", stderr=b"bar"
+        )
+    subprocess_mock.side_effect = run_mock
+    with pytest.raises(CalledProcessError):
+        ImageBuilder.export_conda_env()
