@@ -8,15 +8,10 @@ from datetime import datetime
 import json
 import pathlib
 import shutil
-from typing import Mapping, TypeAlias
-
-import pandas as pd
-import xarray as xr
+from typing import Mapping, TypeAlias, Any
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-StageOutTypes: TypeAlias = xr.Dataset | pd.DataFrame
 
 _MEDIA_TYPES: Mapping[str, str] = {
     "netcdf": "application/x-netcdf",
@@ -33,7 +28,12 @@ class _Bounds:
     y1: float
 
     @classmethod
-    def from_ds(cls, ds: xr.Dataset | pd.DataFrame) -> "_Bounds":
+    def from_ds(cls, ds) -> "_Bounds":
+        """
+
+        :param ds:
+        :return:
+        """
         keys = [
             "geospatial_" + k
             for k in ["lon_min", "lat_min", "lon_max", "lat_max"]
@@ -73,7 +73,7 @@ def clear_directory(directory: pathlib.Path) -> None:
 
 
 def write_stac(
-    datasets: Mapping[str, StageOutTypes], stac_root: pathlib.Path
+    datasets: Mapping[str, Any], stac_root: pathlib.Path
 ) -> None:
     try:
         import pystac
@@ -91,10 +91,10 @@ def write_stac(
         href=f"{catalog_path}",
     )
     for ds_name, ds in datasets.items():
-        if isinstance(ds, xr.Dataset):
+        if _safe_isinstance(ds, "xarray.core.dataset.Dataset"):
             output_format = ds.attrs.get("xcengine_output_format", "zarr")
             suffix = "nc" if output_format == "netcdf" else "zarr"
-        elif isinstance(ds, pd.DataFrame):
+        elif _safe_isinstance(ds, "pandas.DataFrame"):
             output_format = "csv"
             suffix = "csv"
         else:
@@ -144,7 +144,7 @@ def write_stac(
 
 
 def save_datasets(
-    datasets: Mapping[str, StageOutTypes],
+    datasets: Mapping[str, Any],
     output_path: pathlib.Path,
     eoap_mode: bool,
 ) -> dict[str, pathlib.Path]:
@@ -156,7 +156,7 @@ def save_datasets(
         output_subpath = output_path / (ds_id if eoap_mode else "output")
         LOGGER.info(f"Saving {ds_id} to {output_subpath}...")
         output_subpath.mkdir(parents=True, exist_ok=True)
-        if isinstance(ds, xr.Dataset):
+        if _safe_isinstance(ds, "xarray.core.dataset.Dataset"):
             output_format = ds.attrs.get("xcengine_output_format", "zarr")
             suffix = "nc" if output_format == "netcdf" else "zarr"
             dataset_path = output_subpath / f"{ds_id}.{suffix}"
@@ -166,7 +166,7 @@ def save_datasets(
                 ds.to_netcdf(dataset_path)
             else:
                 ds.to_zarr(dataset_path)
-        elif isinstance(ds, pd.DataFrame):
+        elif _safe_isinstance(ds, "pandas.DataFrame"):
             ds.to_csv(output_subpath / f"{ds_id}.csv")
         else:
             raise TypeError(
@@ -183,7 +183,7 @@ def save_datasets(
 
 
 def start_server(
-    datasets: Mapping[str, xr.Dataset],
+    datasets: Mapping[str, Any],
     saved_datasets: dict[str, pathlib.Path],
     args: argparse.Namespace,
     logger: logging.Logger,
@@ -202,6 +202,8 @@ def start_server(
     server = Server(framework=get_framework_class("tornado")(), config={})
     dataset_context = server.ctx.get_api_ctx("datasets")
     for name in datasets:
+        # We already know xcube is available, so xarray must be available too.
+        import xarray as xr
         dataset = (
             xr.open_zarr(saved_datasets[name])
             if args.batch and args.from_saved
@@ -233,3 +235,7 @@ def start_server(
     }
     logger.info(f"Starting server on port {server.ctx.config['port']}...")
     server.start()
+
+def _safe_isinstance(obj: Any, classname: str):
+    parents = type(obj).__mro__
+    return classname in {cls.__module__ + "." + cls.__name__ for cls in parents}
