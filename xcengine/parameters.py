@@ -329,6 +329,6 @@ class NotebookParameters:
         # Check type without requiring xarray in the environment.
         # For now, we don't support subtypes, just explicit xr.Dataset.
         try:
-            return type_.__name__ == "Dataset" and type_.__module__ == "xarray.core.Dataset"
+            return type_.__name__ == "Dataset" and type_.__module__ == "xarray.core.dataset"
         except AttributeError:
             return False
