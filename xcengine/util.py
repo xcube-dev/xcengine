@@ -72,9 +72,7 @@ def clear_directory(directory: pathlib.Path) -> None:
             path.unlink()
 
 
-def write_stac(
-    datasets: Mapping[str, Any], stac_root: pathlib.Path
-) -> None:
+def write_stac(datasets: Mapping[str, Any], stac_root: pathlib.Path) -> None:
     try:
         import pystac
     except ModuleNotFoundError:
@@ -91,10 +89,12 @@ def write_stac(
         href=f"{catalog_path}",
     )
     for ds_name, ds in datasets.items():
-        if _safe_isinstance(ds, "xarray.core.dataset.Dataset"):
+        if _safe_isinstance(ds, {"xarray.core.dataset.Dataset"}):
             output_format = ds.attrs.get("xcengine_output_format", "zarr")
             suffix = "nc" if output_format == "netcdf" else "zarr"
-        elif _safe_isinstance(ds, "pandas.DataFrame"):
+        elif _safe_isinstance(
+            ds, {"pandas.DataFrame", "pandas.core.frame.DataFrame"}
+        ):
             output_format = "csv"
             suffix = "csv"
         else:
@@ -156,7 +156,7 @@ def save_datasets(
         output_subpath = output_path / (ds_id if eoap_mode else "output")
         LOGGER.info(f"Saving {ds_id} to {output_subpath}...")
         output_subpath.mkdir(parents=True, exist_ok=True)
-        if _safe_isinstance(ds, "xarray.core.dataset.Dataset"):
+        if _safe_isinstance(ds, {"xarray.core.dataset.Dataset"}):
             output_format = ds.attrs.get("xcengine_output_format", "zarr")
             suffix = "nc" if output_format == "netcdf" else "zarr"
             dataset_path = output_subpath / f"{ds_id}.{suffix}"
@@ -166,7 +166,9 @@ def save_datasets(
                 ds.to_netcdf(dataset_path)
             else:
                 ds.to_zarr(dataset_path)
-        elif _safe_isinstance(ds, "pandas.DataFrame"):
+        elif _safe_isinstance(
+            ds, {"pandas.DataFrame", "pandas.core.frame.DataFrame"}
+        ):
             ds.to_csv(output_subpath / f"{ds_id}.csv")
         else:
             raise TypeError(
@@ -204,6 +206,7 @@ def start_server(
     for name in datasets:
         # We already know xcube is available, so xarray must be available too.
         import xarray as xr
+
         dataset = (
             xr.open_zarr(saved_datasets[name])
             if args.batch and args.from_saved
@@ -236,6 +239,7 @@ def start_server(
     logger.info(f"Starting server on port {server.ctx.config['port']}...")
     server.start()
 
-def _safe_isinstance(obj: Any, classname: str):
-    parents = type(obj).__mro__
-    return classname in {cls.__module__ + "." + cls.__name__ for cls in parents}
+
+def _safe_isinstance(obj: Any, classnames: set[str]):
+    parents = {c.__module__ + "." + c.__name__ for c in (type(obj).__mro__)}
+    return (classnames & parents) > set()
