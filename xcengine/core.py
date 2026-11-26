@@ -278,13 +278,17 @@ class ImageBuilder:
                 f"This is not guaranteed to work reliably!"
             )
             env_def = self.export_conda_env()
-        # We need xcube for server/viewer and pystac for EOAP stage-in/out
-        LOGGER.info("Adding xcube and/or pystac, if required")
-        self.add_packages_to_environment(
-            env_def,
-            (["xcube"] if with_xcube else [])
-            + (["pystac"] if with_eoap else []),
-        )
+
+        LOGGER.info("Adding any additional required packages to environment.")
+        extra_packages = ["yaml"]  # always needed for parameter data files
+        if with_eoap:
+            extra_packages.append("pystac")  # for stage-in / stage-out
+            if "xarray" in env_def["dependencies"]:
+                extra_packages += ["zarr", "netcdf4"]  # for Dataset export
+        if with_xcube:
+            extra_packages.append("xcube")  # for xcube server mode
+        self.add_packages_to_environment(env_def, extra_packages)
+
         LOGGER.info("Writing environment file")
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
