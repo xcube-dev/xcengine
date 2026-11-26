@@ -130,6 +130,13 @@ my_dataset.attrs["xcengine_output_format"] = "netcdf"
 
 `pandas.DataFrame` instances are always written as CSV.
 
+⚠️ If you're building an EOAP and xarray is listed in your environment file,
+xcetool will automatically add the `zarr` and `netcdf4` libraries to the EOAP
+to allow export of xarray Datasets. If xarray is only included as a transitive
+dependency of another package (e.g. rioxarray, xdggs), xcetool will not detect
+it. So please list xarray explicitly in your environment file if you are using
+it!
+
 ### Setting STAC metadata
 
 In Application Package mode, output data are accompanied by
