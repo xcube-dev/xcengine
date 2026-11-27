@@ -350,10 +350,11 @@ def test_parameters_read_cli_arguments_with_product(
     (tmp_path / "item.json").write_text(json.dumps(stac_item))
 
     params = NotebookParameters(
-        {"some_int": (int, 42), "ds1": (xr.Dataset, None)}
+        {"some_int": (int, 42), "ds1": (xr.Dataset, None)},
+        stage_in_parameter="stage_in"
     )
     param_values = params.read_params_from_cli(
-        ["execute.py", "--some-int", "23", "--product", str(tmp_path)]
+        ["execute.py", "--some-int", "23", "--stage_in", str(tmp_path)]
     )
     assert len(param_values) == 2
     assert param_values["some_int"] == 23
@@ -458,3 +459,12 @@ def test_read_annotations_from_code():
         "my_int": "int",
         "eoproduct": "'EOInput'",
     }
+
+
+def test_parameter_named_product():
+    params = xcengine.parameters.NotebookParameters.from_code(
+        "product = \"foo\"\n"
+    )
+    value = "bar"
+    values = params.read_params_from_cli(["execute.py", "--product", value])
+    assert values["product"] == value

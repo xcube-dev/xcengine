@@ -20,14 +20,18 @@ class NotebookParameters:
     dataset_inputs: list[str]
     config_var_name: ClassVar[str] = "xcengine_config"
     config: dict[str, Any]
+    stage_in_parameter: str | None = None
 
     def __init__(
         self,
         params: dict[str, tuple[type | str, Any]],
         config: dict[str, Any] | None = None,
+        stage_in_parameter: str | None = None
     ):
         self.params = params
         self.config = {} if config is None else config
+        if stage_in_parameter:
+            self.stage_in_parameter = stage_in_parameter
         self.make_cwl_params()
 
     def make_cwl_params(self) -> None:
@@ -39,8 +43,8 @@ class NotebookParameters:
                 self.dataset_inputs.append(param_name)
             else:
                 self.cwl_params[param_name] = self.cwl_type(type_), default
-        if self.dataset_inputs:
-            self.cwl_params["product"] = "Directory", None
+        if self.dataset_inputs and self.stage_in_parameter:
+            self.cwl_params[self.stage_in_parameter] = "Directory", None
 
     @classmethod
     def from_code(
@@ -234,9 +238,10 @@ class NotebookParameters:
                         values[param_name] = type_(
                             args[args.index(arg_name) + 1]
                         )
-        if "product" in self.cwl_params and "--product" in args:
+        sip = self.stage_in_parameter
+        if sip in self.cwl_params and f"--{sip}" in args:
             self.read_datasets_from_product(
-                args[args.index("--product") + 1], values
+                args[args.index(f"--{sip}") + 1], values
             )
         return values
 
