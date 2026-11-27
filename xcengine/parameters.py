@@ -6,7 +6,6 @@ import pathlib
 import typing
 from typing import Any, ClassVar, cast
 
-import xarray as xr
 import yaml
 
 LOGGER = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ class NotebookParameters:
         self.cwl_params = {}
         for param_name in self.params:
             type_, default = self.params[param_name]
-            if type_ is xr.Dataset:
+            if self._is_xarray_dataset(type_):
                 self.dataset_inputs.append(param_name)
             else:
                 self.cwl_params[param_name] = self.cwl_type(type_), default
@@ -64,7 +63,10 @@ class NotebookParameters:
 
         def convert_type(yaml_spec: str) -> type | str:
             match yaml_spec:
-                case "int" | "float" | "bool" | "str" | "Dataset":
+                case "int" | "float" | "bool" | "str":
+                    return eval(yaml_spec, globals(), {})
+                case "Dataset":
+                    import xarray as xr
                     return eval(yaml_spec, globals(), {"Dataset": xr.Dataset})
                 case "Directory":
                     return "Directory"
@@ -224,7 +226,7 @@ class NotebookParameters:
         values = {}
         for param_name, (type_, _) in self.params.items():
             arg_name = "--" + param_name.replace("_", "-")
-            if arg_name in args and type_ != xr.Dataset:
+            if arg_name in args and not self._is_xarray_dataset(type_):
                 match type_:
                     case builtins.bool:
                         values[param_name] = True
@@ -269,7 +271,7 @@ class NotebookParameters:
                 f"{', '.join(missing)}"
             )
         for param_name, (type_, _) in self.params.items():
-            if type_ is xr.Dataset:
+            if self._is_xarray_dataset(type_):
                 values[param_name] = self.read_staged_in_dataset(
                     stage_in_path, catalog, param_name
                 )
@@ -279,8 +281,9 @@ class NotebookParameters:
         stage_in_path: pathlib.Path,
         catalog: "pystac.Catalog",
         param_name: str,
-    ) -> xr.Dataset:
+    ) -> Any:
         import pystac
+        import xarray as xr
 
         item_links = [link for link in catalog.links if link.rel == "item"]
         item = next(
@@ -320,3 +323,12 @@ class NotebookParameters:
             for node in ast.walk(ast.parse(code))
             if isinstance(node, ast.AnnAssign)
         }
+
+    @staticmethod
+    def _is_xarray_dataset(type_: Any):
+        # Check type without requiring xarray in the environment.
+        # For now, we don't support subtypes, just explicit xr.Dataset.
+        try:
+            return type_.__name__ == "Dataset" and type_.__module__ == "xarray.core.dataset"
+        except AttributeError:
+            return False

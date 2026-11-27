@@ -278,13 +278,25 @@ class ImageBuilder:
                 f"This is not guaranteed to work reliably!"
             )
             env_def = self.export_conda_env()
-        # We need xcube for server/viewer and pystac for EOAP stage-in/out
-        LOGGER.info("Adding xcube and/or pystac, if required")
-        self.add_packages_to_environment(
-            env_def,
-            (["xcube"] if with_xcube else [])
-            + (["pystac"] if with_eoap else []),
-        )
+
+        LOGGER.info("Adding any additional required packages to environment.")
+        extra_packages = ["yaml"]  # always needed for parameter data files
+        if with_eoap:
+            extra_packages.append("pystac")  # for stage-in / stage-out
+            if any(
+                isinstance(d, str) and d.startswith("xarray")
+                for d in env_def["dependencies"]
+            ):
+                # The test above will catch "xarray" followed by a version
+                # specification. It will also catch packages like
+                # xarray-spatial and xarrayutils which have "xarray" as a
+                # prefix. This is a feature, not a bug, because any such
+                # package almost certainly has xarray as a dependency.
+                extra_packages += ["zarr", "netcdf4"]  # for Dataset export
+        if with_xcube:
+            extra_packages.append("xcube")  # for xcube server mode
+        self.add_packages_to_environment(env_def, extra_packages)
+
         LOGGER.info("Writing environment file")
         with open(self.build_dir / "environment.yml", "w") as fh:
             fh.write(yaml.safe_dump(env_def))
@@ -331,9 +343,15 @@ class ImageBuilder:
     @staticmethod
     def export_conda_env() -> dict:
         LOGGER.info("Exporting conda environment")
-        executable = shutil.which("conda") or shutil.which("mamba") or shutil.which("micromamba")
+        executable = (
+            shutil.which("conda")
+            or shutil.which("mamba")
+            or shutil.which("micromamba")
+        )
         if not executable:
-            raise RuntimeError("No conda, mamba or micromamba executable available")
+            raise RuntimeError(
+                "No conda, mamba or micromamba executable available"
+            )
         conda_process = subprocess.run(
             [executable, "env", "export"], capture_output=True
         )

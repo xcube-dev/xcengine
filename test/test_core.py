@@ -409,10 +409,11 @@ def test_image_builder_build_dir(
 
     build_dir = tmp_path / "build"
     build_env_path = tmp_path / "env2.yaml"
+    xarray_dep = "xarray >=2024.7"
     env_def = {
         "name": "foo",
         "channels": "bar",
-        "dependencies": ["python >=3.13", "baz >=42.0"]
+        "dependencies": ["python >=3.13", xarray_dep, "baz >=42.0"]
         + (["pystac"] if pystac_in_deps else [])
         + (["xcube"] if xcube_in_deps else []),
     }
@@ -461,8 +462,11 @@ def test_image_builder_build_dir(
         output_deps = set(output_env["dependencies"])
         input_deps = set(env_def["dependencies"])
         assert output_deps >= input_deps
+        assert "yaml" in output_deps
         assert ("pystac" in output_deps) == pystac_in_deps or with_eoap
         assert ("xcube" in output_deps) == xcube_in_deps or with_xcube
+        assert xarray_dep in output_deps
+        assert ({"zarr", "netcdf4"} < output_deps) == with_eoap
 
     cwl = image_builder.create_cwl()
     assert "cwlVersion" in cwl
@@ -532,7 +536,7 @@ def test_add_packages_to_environment(additions):
 @patch("shutil.which")
 def test_export_conda_env_no_executable(which_mock):
     which_mock.return_value = None
-    with pytest.raises(RuntimeError, match='No conda'):
+    with pytest.raises(RuntimeError, match="No conda"):
         ImageBuilder.export_conda_env()
 
 
@@ -542,6 +546,7 @@ def test_export_conda_env_conda_error(subprocess_mock):
         return CompletedProcess(
             args=arg_list, returncode=1, stdout=b"foo", stderr=b"bar"
         )
+
     subprocess_mock.side_effect = run_mock
     with pytest.raises(CalledProcessError):
         ImageBuilder.export_conda_env()
