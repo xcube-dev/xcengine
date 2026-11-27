@@ -222,8 +222,12 @@ class NotebookParameters:
 
     def read_params_from_cli(self, args: list[str]) -> dict[str, Any]:
         values = {}
+
+        def make_arg_name(param_name: str) -> str:
+            return "--" + param_name.replace("_", "-")
+
         for param_name, (type_, _) in self.params.items():
-            arg_name = "--" + param_name.replace("_", "-")
+            arg_name = make_arg_name(param_name)
             if arg_name in args and type_ != xr.Dataset:
                 match type_:
                     case builtins.bool:
@@ -234,11 +238,28 @@ class NotebookParameters:
                         values[param_name] = type_(
                             args[args.index(arg_name) + 1]
                         )
+        for (
+            inverted_name,
+            plain_name,
+        ) in self.inverted_boolean_params().items():
+            arg_name = make_arg_name(inverted_name)
+            if arg_name in args:
+                values[plain_name] = False
+
         if "product" in self.cwl_params and "--product" in args:
             self.read_datasets_from_product(
                 args[args.index("--product") + 1], values
             )
         return values
+
+    def inverted_boolean_params(self) -> dict[str, str]:
+        result = {}
+        for param_name, (type_, default_) in self.params.items():
+            if type_ is bool:
+                inverted_name = "no_" + param_name
+                if inverted_name not in self.params:
+                    result[inverted_name] = param_name
+        return result
 
     def read_datasets_from_product(
         self, stage_in: pathlib.Path | str, values: dict[str, Any]

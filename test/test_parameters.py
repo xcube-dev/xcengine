@@ -458,3 +458,9 @@ def test_read_annotations_from_code():
         "my_int": "int",
         "eoproduct": "'EOInput'",
     }
+
+
+def test_inverted_boolean_cli_arg():
+    params = NotebookParameters({"foo": (bool, True)})
+    assert params.read_params_from_cli(["execute.py", "--foo"])["foo"]
+    assert not params.read_params_from_cli(["execute.py", "--no-foo"])["foo"]
