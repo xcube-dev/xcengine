@@ -2,6 +2,8 @@
 
 * Add a link to the HEATWISE project in the documentation (#123)
 * Make environment analysis more robust (#126)
+* Make sure that necessary libraries are always included in generated
+  images (#128)
 
 ## Changes in 0.1.4
 

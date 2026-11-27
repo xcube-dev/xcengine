@@ -462,6 +462,7 @@ def test_image_builder_build_dir(
         output_deps = set(output_env["dependencies"])
         input_deps = set(env_def["dependencies"])
         assert output_deps >= input_deps
+        assert "yaml" in output_deps
         assert ("pystac" in output_deps) == pystac_in_deps or with_eoap
         assert ("xcube" in output_deps) == xcube_in_deps or with_xcube
         assert xarray_dep in output_deps
