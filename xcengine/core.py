@@ -283,7 +283,15 @@ class ImageBuilder:
         extra_packages = ["yaml"]  # always needed for parameter data files
         if with_eoap:
             extra_packages.append("pystac")  # for stage-in / stage-out
-            if "xarray" in env_def["dependencies"]:
+            if any(
+                isinstance(d, str) and d.startswith("xarray")
+                for d in env_def["dependencies"]
+            ):
+                # The test above will catch "xarray" followed by a version
+                # specification. It will also catch packages like
+                # xarray-spatial and xarrayutils which have "xarray" as a
+                # prefix. This is a feature, not a bug, because any such
+                # package almost certainly has xarray as a dependency.
                 extra_packages += ["zarr", "netcdf4"]  # for Dataset export
         if with_xcube:
             extra_packages.append("xcube")  # for xcube server mode
@@ -335,9 +343,15 @@ class ImageBuilder:
     @staticmethod
     def export_conda_env() -> dict:
         LOGGER.info("Exporting conda environment")
-        executable = shutil.which("conda") or shutil.which("mamba") or shutil.which("micromamba")
+        executable = (
+            shutil.which("conda")
+            or shutil.which("mamba")
+            or shutil.which("micromamba")
+        )
         if not executable:
-            raise RuntimeError("No conda, mamba or micromamba executable available")
+            raise RuntimeError(
+                "No conda, mamba or micromamba executable available"
+            )
         conda_process = subprocess.run(
             [executable, "env", "export"], capture_output=True
         )
