@@ -2,6 +2,7 @@
 
 * Add a link to the HEATWISE project in the documentation (#123)
 * Make environment analysis more robust (#126)
+* Allow use of "product" as a parameter name (#131)
 
 ## Changes in 0.1.4
 
